@@ -17,5 +17,15 @@ namespace QuantityMeasurementApp.Services
 
             return firstFeet.Equals(secondFeet);
         }
+
+        public bool AreEqual(Inches firstInches, Inches secondInches)
+        {
+            if (ReferenceEquals(firstInches, null) || ReferenceEquals(secondInches, null))
+            {
+                return false;
+            }
+
+            return firstInches.Equals(secondInches);
+        }
     }
 }
