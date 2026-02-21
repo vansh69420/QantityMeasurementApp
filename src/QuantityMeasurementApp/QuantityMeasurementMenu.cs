@@ -17,8 +17,41 @@ namespace QuantityMeasurementApp.Menu
 
         public void Run()
         {
-            double firstValueInFeet = ReadValidFeetValue("Enter first value in feet: ");
-            double secondValueInFeet = ReadValidFeetValue("Enter second value in feet: ");
+            while (true)
+            {
+                Console.WriteLine("=== Quantity Measurement Menu ===");
+                Console.WriteLine("1) Feet Equality");
+                Console.WriteLine("2) Inches Equality");
+                Console.WriteLine("0) Exit");
+                Console.Write("Choose an option: ");
+
+                string? option = Console.ReadLine();
+
+                if (option == "1")
+                {
+                    CheckFeetEquality();
+                }
+                else if (option == "2")
+                {
+                    CheckInchesEquality();
+                }
+                else if (option == "0")
+                {
+                    return;
+                }
+                else
+                {
+                    Console.WriteLine("Invalid option. Please choose 1, 2, or 0.");
+                }
+
+                Console.WriteLine();
+            }
+        }
+
+        private void CheckFeetEquality()
+        {
+            double firstValueInFeet = ReadValidFiniteDouble("Enter first value in feet: ");
+            double secondValueInFeet = ReadValidFiniteDouble("Enter second value in feet: ");
 
             Feet firstFeet = new Feet(firstValueInFeet);
             Feet secondFeet = new Feet(secondValueInFeet);
@@ -29,7 +62,21 @@ namespace QuantityMeasurementApp.Menu
             Console.WriteLine($"Output: Equal ({isEqual.ToString().ToLowerInvariant()})");
         }
 
-        private static double ReadValidFeetValue(string promptMessage)
+        private void CheckInchesEquality()
+        {
+            double firstValueInInches = ReadValidFiniteDouble("Enter first value in inches: ");
+            double secondValueInInches = ReadValidFiniteDouble("Enter second value in inches: ");
+
+            Inches firstInches = new Inches(firstValueInInches);
+            Inches secondInches = new Inches(secondValueInInches);
+
+            bool isEqual = quantityMeasurementService.AreEqual(firstInches, secondInches);
+
+            Console.WriteLine($"Input: {firstInches} and {secondInches}");
+            Console.WriteLine($"Output: Equal ({isEqual.ToString().ToLowerInvariant()})");
+        }
+
+        private static double ReadValidFiniteDouble(string promptMessage)
         {
             while (true)
             {
