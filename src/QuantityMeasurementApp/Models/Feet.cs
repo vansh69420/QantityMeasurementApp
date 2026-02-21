@@ -29,7 +29,7 @@ namespace QuantityMeasurementApp.Models
                 return true;
             }
 
-            return double.Compare(measurementValue, otherFeet.measurementValue) == 0;
+            return measurementValue.CompareTo(otherFeet.measurementValue) == 0;
         }
 
         public override bool Equals(object? obj)
