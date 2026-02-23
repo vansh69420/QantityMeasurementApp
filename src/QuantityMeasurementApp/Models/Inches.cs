@@ -4,18 +4,19 @@ using System.Globalization;
 namespace QuantityMeasurementApp.Models
 {
     /// <summary>
-    /// Immutable value object representing a measurement in inches.
+    /// Backward-compatible wrapper for inches measurements (UC2).
+    /// Internally uses QuantityLength to avoid duplicated equality logic.
     /// </summary>
     public sealed class Inches : IEquatable<Inches>
     {
-        private readonly double measurementValue;
+        private readonly QuantityLength quantityLength;
 
         public Inches(double measurementValue)
         {
-            this.measurementValue = measurementValue;
+            quantityLength = new QuantityLength(measurementValue, LengthUnit.Inch);
         }
 
-        public double Value => measurementValue;
+        public double Value => quantityLength.Value;
 
         public bool Equals(Inches? otherInches)
         {
@@ -29,7 +30,7 @@ namespace QuantityMeasurementApp.Models
                 return true;
             }
 
-            return measurementValue.CompareTo(otherInches.measurementValue) == 0;
+            return quantityLength.Equals(otherInches.quantityLength);
         }
 
         public override bool Equals(object? obj)
@@ -49,12 +50,12 @@ namespace QuantityMeasurementApp.Models
 
         public override int GetHashCode()
         {
-            return measurementValue.GetHashCode();
+            return quantityLength.GetHashCode();
         }
 
         public override string ToString()
         {
-            return $"{measurementValue.ToString("0.0", CultureInfo.InvariantCulture)} inch";
+            return $"{quantityLength.Value.ToString("0.0", CultureInfo.InvariantCulture)} inch";
         }
     }
 }

@@ -4,18 +4,19 @@ using System.Globalization;
 namespace QuantityMeasurementApp.Models
 {
     /// <summary>
-    /// Immutable value object representing a measurement in feet.
+    /// Backward-compatible wrapper for feet measurements (UC1).
+    /// Internally uses QuantityLength to avoid duplicated equality logic.
     /// </summary>
     public sealed class Feet : IEquatable<Feet>
     {
-        private readonly double measurementValue;
+        private readonly QuantityLength quantityLength;
 
         public Feet(double measurementValue)
         {
-            this.measurementValue = measurementValue;
+            quantityLength = new QuantityLength(measurementValue, LengthUnit.Feet);
         }
 
-        public double Value => measurementValue;
+        public double Value => quantityLength.Value;
 
         public bool Equals(Feet? otherFeet)
         {
@@ -29,7 +30,7 @@ namespace QuantityMeasurementApp.Models
                 return true;
             }
 
-            return measurementValue.CompareTo(otherFeet.measurementValue) == 0;
+            return quantityLength.Equals(otherFeet.quantityLength);
         }
 
         public override bool Equals(object? obj)
@@ -49,12 +50,12 @@ namespace QuantityMeasurementApp.Models
 
         public override int GetHashCode()
         {
-            return measurementValue.GetHashCode();
+            return quantityLength.GetHashCode();
         }
 
         public override string ToString()
         {
-            return $"{measurementValue.ToString("0.0", CultureInfo.InvariantCulture)} ft";
+            return $"{quantityLength.Value.ToString("0.0", CultureInfo.InvariantCulture)} ft";
         }
     }
 }
