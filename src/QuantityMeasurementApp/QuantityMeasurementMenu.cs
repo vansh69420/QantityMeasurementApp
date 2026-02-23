@@ -123,36 +123,36 @@ namespace QuantityMeasurementApp.Menu
         }
 
         private void CheckGenericLengthEquality()
+    {
+        double firstValue = ReadValidFiniteDouble("Enter first value: ");
+        LengthUnit firstUnit = ReadValidLengthUnit("Enter first unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+
+        double secondValue = ReadValidFiniteDouble("Enter second value: ");
+        LengthUnit secondUnit = ReadValidLengthUnit("Enter second unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+
+        QuantityLength firstLength = new QuantityLength(firstValue, firstUnit);
+        QuantityLength secondLength = new QuantityLength(secondValue, secondUnit);
+
+        bool isEqual = quantityMeasurementService.AreEqual(firstLength, secondLength);
+
+        Console.WriteLine($"Input: {firstLength} and {secondLength}");
+        Console.WriteLine($"Output: Equal ({isEqual.ToString().ToLowerInvariant()})");
+    }
+
+    private static LengthUnit ReadValidLengthUnit(string promptMessage)
+    {
+        while (true)
         {
-            double firstValue = ReadValidFiniteDouble("Enter first value: ");
-            LengthUnit firstUnit = ReadValidLengthUnit("Enter first unit (feet/ft/inch/in/inches): ");
+            Console.Write(promptMessage);
+            string? rawUnitText = Console.ReadLine();
 
-            double secondValue = ReadValidFiniteDouble("Enter second value: ");
-            LengthUnit secondUnit = ReadValidLengthUnit("Enter second unit (feet/ft/inch/in/inches): ");
-
-            QuantityLength firstLength = new QuantityLength(firstValue, firstUnit);
-            QuantityLength secondLength = new QuantityLength(secondValue, secondUnit);
-
-            bool isEqual = quantityMeasurementService.AreEqual(firstLength, secondLength);
-
-            Console.WriteLine($"Input: {firstLength} and {secondLength}");
-            Console.WriteLine($"Output: Equal ({isEqual.ToString().ToLowerInvariant()})");
-        }
-
-        private static LengthUnit ReadValidLengthUnit(string promptMessage)
-        {
-            while (true)
+            if (LengthUnitParser.TryParse(rawUnitText, out LengthUnit parsedUnit))
             {
-                Console.Write(promptMessage);
-                string? rawUnitText = Console.ReadLine();
-
-                if (LengthUnitParser.TryParse(rawUnitText, out LengthUnit parsedUnit))
-                {
-                    return parsedUnit;
-                }
-
-                Console.WriteLine("Invalid unit. Supported units: feet/ft, inch/in/inches.");
+                return parsedUnit;
             }
+
+            Console.WriteLine("Invalid unit. Supported units: feet/ft, inch/in/inches.");
         }
+    }
     }
 }
