@@ -40,13 +40,17 @@ namespace QuantityMeasurementApp.Menu
                     case "3":
                         CheckGenericLengthEquality();
                         break;
-                    case "4": CheckLengthConversion(); break;
+                    case "4":
+                        CheckLengthConversion();
+                        break;
                     case "0":
                         return;
                     default:
-                        Console.WriteLine("Invalid option. Please choose 1, 2, 3, or 0.");
+                        Console.WriteLine("Invalid option. Please choose 1, 2, 3, 4, or 0.");
                         break;
                 }
+
+                Console.WriteLine();
             }
         }
 
@@ -76,6 +80,44 @@ namespace QuantityMeasurementApp.Menu
 
             Console.WriteLine($"Input: {firstInches} and {secondInches}");
             Console.WriteLine($"Output: Equal ({isEqual.ToString().ToLowerInvariant()})");
+        }
+
+        private void CheckGenericLengthEquality()
+        {
+            double firstValue = ReadValidFiniteDouble("Enter first value: ");
+            LengthUnit firstUnit = ReadValidLengthUnit(
+                "Enter first unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+
+            double secondValue = ReadValidFiniteDouble("Enter second value: ");
+            LengthUnit secondUnit = ReadValidLengthUnit(
+                "Enter second unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+
+            QuantityLength firstLength = new QuantityLength(firstValue, firstUnit);
+            QuantityLength secondLength = new QuantityLength(secondValue, secondUnit);
+
+            bool isEqual = quantityMeasurementService.AreEqual(firstLength, secondLength);
+
+            Console.WriteLine($"Input: {firstLength} and {secondLength}");
+            Console.WriteLine($"Output: Equal ({isEqual.ToString().ToLowerInvariant()})");
+        }
+
+        private void CheckLengthConversion()
+        {
+            double measurementValue = ReadValidFiniteDouble("Enter value to convert: ");
+
+            LengthUnit sourceUnit = ReadValidLengthUnit(
+                "Enter source unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+
+            LengthUnit targetUnit = ReadValidLengthUnit(
+                "Enter target unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+
+            double convertedValue = QuantityLength.Convert(measurementValue, sourceUnit, targetUnit);
+
+            string formattedInputValue = measurementValue.ToString("0.######", CultureInfo.InvariantCulture);
+            string formattedOutputValue = convertedValue.ToString("0.######", CultureInfo.InvariantCulture);
+
+            Console.WriteLine(
+                $"Input: convert({formattedInputValue}, {ToConversionDisplayUnit(sourceUnit)}, {ToConversionDisplayUnit(targetUnit)}) -> Output: {formattedOutputValue}");
         }
 
         private static double ReadValidFiniteDouble(string promptMessage)
@@ -124,52 +166,33 @@ namespace QuantityMeasurementApp.Menu
             return !double.IsNaN(parsedValue) && !double.IsInfinity(parsedValue);
         }
 
-        private void CheckGenericLengthEquality()
-    {
-        double firstValue = ReadValidFiniteDouble("Enter first value: ");
-        LengthUnit firstUnit = ReadValidLengthUnit("Enter first unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
-
-        double secondValue = ReadValidFiniteDouble("Enter second value: ");
-        LengthUnit secondUnit = ReadValidLengthUnit("Enter second unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
-
-        QuantityLength firstLength = new QuantityLength(firstValue, firstUnit);
-        QuantityLength secondLength = new QuantityLength(secondValue, secondUnit);
-
-        bool isEqual = quantityMeasurementService.AreEqual(firstLength, secondLength);
-
-        Console.WriteLine($"Input: {firstLength} and {secondLength}");
-        Console.WriteLine($"Output: Equal ({isEqual.ToString().ToLowerInvariant()})");
-    }
-
-    private static LengthUnit ReadValidLengthUnit(string promptMessage)
-    {
-        while (true)
+        private static LengthUnit ReadValidLengthUnit(string promptMessage)
         {
-            Console.Write(promptMessage);
-            string? rawUnitText = Console.ReadLine();
-
-            if (LengthUnitParser.TryParse(rawUnitText, out LengthUnit parsedUnit))
+            while (true)
             {
-                return parsedUnit;
+                Console.Write(promptMessage);
+                string? rawUnitText = Console.ReadLine();
+
+                if (LengthUnitParser.TryParse(rawUnitText, out LengthUnit parsedUnit))
+                {
+                    return parsedUnit;
+                }
+
+                Console.WriteLine(
+                    "Invalid unit. Supported units: feet/ft, inch/in/inches, yard/yards/yd, cm/centimeter/centimeters.");
             }
-
-            Console.WriteLine("Invalid unit. Supported units: feet/ft, inch/in/inches.");
         }
-    }
-    private void CheckLengthConversion()
-    {
-        double measurementValue = ReadValidFiniteDouble("Enter value to convert: ");
 
-        LengthUnit sourceUnit = ReadValidLengthUnit(
-            "Enter source unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
-
-        LengthUnit targetUnit = ReadValidLengthUnit(
-            "Enter target unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
-
-        double convertedValue = QuantityLength.Convert(measurementValue, sourceUnit, targetUnit);
-
-        Console.WriteLine(
-            $"Input: convert({measurementValue:0.0}, {sourceUnit.ToString().ToUpperInvariant()}, {targetUnit.ToString().ToUpperInvariant()}) -> Output: {convertedValue:0.######}");
-    }
+        private static string ToConversionDisplayUnit(LengthUnit lengthUnit)
+        {
+            return lengthUnit switch
+            {
+                LengthUnit.Feet => "FEET",
+                LengthUnit.Inch => "INCHES",
+                LengthUnit.Yard => "YARDS",
+                LengthUnit.Centimeter => "CENTIMETERS",
+                _ => lengthUnit.ToString().ToUpperInvariant()
+            };
+        }
     }
 }
