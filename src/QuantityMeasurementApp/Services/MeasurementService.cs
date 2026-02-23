@@ -3,9 +3,6 @@ using QuantityMeasurementApp.Models;
 
 namespace QuantityMeasurementApp.Services
 {
-    /// <summary>
-    /// Service responsible for quantity comparison logic.
-    /// </summary>
     public sealed class QuantityMeasurementService : IQuantityMeasurementService
     {
         public bool AreEqual(Feet firstFeet, Feet secondFeet)
@@ -26,6 +23,16 @@ namespace QuantityMeasurementApp.Services
             }
 
             return firstInches.Equals(secondInches);
+        }
+
+        public bool AreEqual(QuantityLength firstLength, QuantityLength secondLength)
+        {
+            if (ReferenceEquals(firstLength, null) || ReferenceEquals(secondLength, null))
+            {
+                return false;
+            }
+
+            return firstLength.Equals(secondLength);
         }
     }
 }
