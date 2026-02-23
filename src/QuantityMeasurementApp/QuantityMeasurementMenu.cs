@@ -23,6 +23,7 @@ namespace QuantityMeasurementApp.Menu
                 Console.WriteLine("1) Feet Equality");
                 Console.WriteLine("2) Inches Equality");
                 Console.WriteLine("3) Generic Length Equality (UC3)");
+                Console.WriteLine("4) Unit Conversion (UC5)");
                 Console.WriteLine("0) Exit");
                 Console.Write("Choose an option: ");
 
@@ -39,6 +40,7 @@ namespace QuantityMeasurementApp.Menu
                     case "3":
                         CheckGenericLengthEquality();
                         break;
+                    case "4": CheckLengthConversion(); break;
                     case "0":
                         return;
                     default:
@@ -153,6 +155,21 @@ namespace QuantityMeasurementApp.Menu
 
             Console.WriteLine("Invalid unit. Supported units: feet/ft, inch/in/inches.");
         }
+    }
+    private void CheckLengthConversion()
+    {
+        double measurementValue = ReadValidFiniteDouble("Enter value to convert: ");
+
+        LengthUnit sourceUnit = ReadValidLengthUnit(
+            "Enter source unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+
+        LengthUnit targetUnit = ReadValidLengthUnit(
+            "Enter target unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+
+        double convertedValue = QuantityLength.Convert(measurementValue, sourceUnit, targetUnit);
+
+        Console.WriteLine(
+            $"Input: convert({measurementValue:0.0}, {sourceUnit.ToString().ToUpperInvariant()}, {targetUnit.ToString().ToUpperInvariant()}) -> Output: {convertedValue:0.######}");
     }
     }
 }
