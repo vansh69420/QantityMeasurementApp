@@ -22,29 +22,29 @@ namespace QuantityMeasurementApp.Menu
                 Console.WriteLine("=== Quantity Measurement Menu ===");
                 Console.WriteLine("1) Feet Equality");
                 Console.WriteLine("2) Inches Equality");
+                Console.WriteLine("3) Generic Length Equality (UC3)");
                 Console.WriteLine("0) Exit");
                 Console.Write("Choose an option: ");
 
                 string? option = Console.ReadLine();
 
-                if (option == "1")
+                switch (option)
                 {
-                    CheckFeetEquality();
+                    case "1":
+                        CheckFeetEquality();
+                        break;
+                    case "2":
+                        CheckInchesEquality();
+                        break;
+                    case "3":
+                        CheckGenericLengthEquality();
+                        break;
+                    case "0":
+                        return;
+                    default:
+                        Console.WriteLine("Invalid option. Please choose 1, 2, 3, or 0.");
+                        break;
                 }
-                else if (option == "2")
-                {
-                    CheckInchesEquality();
-                }
-                else if (option == "0")
-                {
-                    return;
-                }
-                else
-                {
-                    Console.WriteLine("Invalid option. Please choose 1, 2, or 0.");
-                }
-
-                Console.WriteLine();
             }
         }
 
@@ -120,6 +120,39 @@ namespace QuantityMeasurementApp.Menu
             }
 
             return !double.IsNaN(parsedValue) && !double.IsInfinity(parsedValue);
+        }
+
+        private void CheckGenericLengthEquality()
+        {
+            double firstValue = ReadValidFiniteDouble("Enter first value: ");
+            LengthUnit firstUnit = ReadValidLengthUnit("Enter first unit (feet/ft/inch/in/inches): ");
+
+            double secondValue = ReadValidFiniteDouble("Enter second value: ");
+            LengthUnit secondUnit = ReadValidLengthUnit("Enter second unit (feet/ft/inch/in/inches): ");
+
+            QuantityLength firstLength = new QuantityLength(firstValue, firstUnit);
+            QuantityLength secondLength = new QuantityLength(secondValue, secondUnit);
+
+            bool isEqual = quantityMeasurementService.AreEqual(firstLength, secondLength);
+
+            Console.WriteLine($"Input: {firstLength} and {secondLength}");
+            Console.WriteLine($"Output: Equal ({isEqual.ToString().ToLowerInvariant()})");
+        }
+
+        private static LengthUnit ReadValidLengthUnit(string promptMessage)
+        {
+            while (true)
+            {
+                Console.Write(promptMessage);
+                string? rawUnitText = Console.ReadLine();
+
+                if (LengthUnitParser.TryParse(rawUnitText, out LengthUnit parsedUnit))
+                {
+                    return parsedUnit;
+                }
+
+                Console.WriteLine("Invalid unit. Supported units: feet/ft, inch/in/inches.");
+            }
         }
     }
 }
