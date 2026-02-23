@@ -27,6 +27,18 @@ namespace QuantityMeasurementApp.Models
                 return true;
             }
 
+            if (normalizedUnitText is "yard" or "yards" or "yd")
+            {
+                lengthUnit = LengthUnit.Yard;
+                return true;
+            }
+
+            if (normalizedUnitText is "cm" or "centimeter" or "centimeters")
+            {
+                lengthUnit = LengthUnit.Centimeter;
+                return true;
+            }
+
             return false;
         }
 
@@ -39,7 +51,9 @@ namespace QuantityMeasurementApp.Models
 
             if (!TryParse(unitText, out LengthUnit parsedUnit))
             {
-                throw new ArgumentException("Unsupported unit. Supported units: feet/ft, inch/in/inches.", nameof(unitText));
+                throw new ArgumentException(
+                    "Unsupported unit. Supported units: feet/ft, inch/in/inches, yard/yards/yd, cm/centimeter/centimeters.",
+                    nameof(unitText));
             }
 
             return parsedUnit;
