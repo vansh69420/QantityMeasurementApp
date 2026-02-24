@@ -24,6 +24,7 @@ namespace QuantityMeasurementApp.Menu
                 Console.WriteLine("2) Inches Equality");
                 Console.WriteLine("3) Generic Length Equality (UC3)");
                 Console.WriteLine("4) Unit Conversion (UC5)");
+                Console.WriteLine("5) Length Addition (UC6)");
                 Console.WriteLine("0) Exit");
                 Console.Write("Choose an option: ");
 
@@ -43,10 +44,13 @@ namespace QuantityMeasurementApp.Menu
                     case "4":
                         CheckLengthConversion();
                         break;
+                    case "5":
+                        CheckLengthAddition();
+                        break;
                     case "0":
                         return;
                     default:
-                        Console.WriteLine("Invalid option. Please choose 1, 2, 3, 4, or 0.");
+                        Console.WriteLine("Invalid option. Please choose 1, 2, 3, 4, 5 or 0.");
                         break;
                 }
 
@@ -118,6 +122,29 @@ namespace QuantityMeasurementApp.Menu
 
             Console.WriteLine(
                 $"Input: convert({formattedInputValue}, {ToConversionDisplayUnit(sourceUnit)}, {ToConversionDisplayUnit(targetUnit)}) -> Output: {formattedOutputValue}");
+        }
+
+        private void CheckLengthAddition()
+        {
+            double firstValue = ReadValidFiniteDouble("Enter first value: ");
+            LengthUnit firstUnit = ReadValidLengthUnit(
+                "Enter first unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+
+            double secondValue = ReadValidFiniteDouble("Enter second value: ");
+            LengthUnit secondUnit = ReadValidLengthUnit(
+                "Enter second unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+
+            QuantityLength firstLength = new QuantityLength(firstValue, firstUnit);
+            QuantityLength secondLength = new QuantityLength(secondValue, secondUnit);
+
+            // UC6: result must be returned in the unit of the first operand.
+            QuantityLength resultLength = QuantityLength.Add(firstLength, secondLength);
+
+            Console.WriteLine(
+                $"You entered: {firstLength.Value:0.######} {firstLength.Unit.ToDisplayString()} and {secondLength.Value:0.######} {secondLength.Unit.ToDisplayString()}");
+
+            Console.WriteLine(
+                $"Result: {resultLength.Value:0.######} {resultLength.Unit.ToDisplayString()}");
         }
 
         private static double ReadValidFiniteDouble(string promptMessage)
