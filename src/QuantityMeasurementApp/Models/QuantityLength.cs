@@ -167,44 +167,6 @@ namespace QuantityMeasurementApp.Models
             return new QuantityLength(sumInTargetUnit, targetUnit);
         }
 
-        public static QuantityLength Add(
-            double firstValue,
-            LengthUnit firstUnit,
-            double secondValue,
-            LengthUnit secondUnit,
-            LengthUnit targetUnit)
-        {
-            if (double.IsNaN(firstValue) || double.IsInfinity(firstValue))
-            {
-                throw new ArgumentException("First length value must be a finite number.", nameof(firstValue));
-            }
-
-            if (double.IsNaN(secondValue) || double.IsInfinity(secondValue))
-            {
-                throw new ArgumentException("Second length value must be a finite number.", nameof(secondValue));
-            }
-
-            if (!Enum.IsDefined(typeof(LengthUnit), firstUnit))
-            {
-                throw new ArgumentException("Unsupported first length unit.", nameof(firstUnit));
-            }
-
-            if (!Enum.IsDefined(typeof(LengthUnit), secondUnit))
-            {
-                throw new ArgumentException("Unsupported second length unit.", nameof(secondUnit));
-            }
-
-            if (!Enum.IsDefined(typeof(LengthUnit), targetUnit))
-            {
-                throw new ArgumentException("Unsupported target length unit.", nameof(targetUnit));
-            }
-
-            QuantityLength firstLength = new QuantityLength(firstValue, firstUnit);
-            QuantityLength secondLength = new QuantityLength(secondValue, secondUnit);
-
-            return Add(firstLength, secondLength, targetUnit);
-        }
-
         private double ConvertToInches()
         {
             double conversionFactorToInches = lengthUnit.GetConversionFactorToInches();
