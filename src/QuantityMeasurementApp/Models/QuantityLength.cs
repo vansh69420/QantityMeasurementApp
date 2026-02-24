@@ -133,11 +133,11 @@ namespace QuantityMeasurementApp.Models
         {
             if(ReferenceEquals(firstLength, null))
             {
-                throw new ArgumentException(nameof(firstLength), "First Length cannot be null.");
+                throw new ArgumentNullException(nameof(firstLength), "First Length cannot be null.");
             }
             if(ReferenceEquals(secondLength, null))
             {
-                throw new ArgumentException(nameof(secondLength), "Second Length cannot be null.");
+                throw new ArgumentNullException(nameof(secondLength), "Second Length cannot be null.");
             }
             return Add(firstLength, secondLength, firstLength.Unit);
         }
@@ -145,11 +145,11 @@ namespace QuantityMeasurementApp.Models
         {
             if(ReferenceEquals(firstLength, null))
             {
-                throw new ArgumentException(nameof(firstLength), "First length cannot be null.");
+                throw new ArgumentNullException(nameof(firstLength), "First length cannot be null.");
             }
             if(ReferenceEquals(secondLength, null))
             {
-                throw new ArgumentException(nameof(secondLength), "Second Length cannot be emoty.");
+                throw new ArgumentNullException(nameof(secondLength), "Second Length cannot be emoty.");
             }
             if(!Enum.IsDefined(typeof(LengthUnit), targetUnit))
             {
