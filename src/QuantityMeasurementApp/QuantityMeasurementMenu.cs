@@ -25,6 +25,7 @@ namespace QuantityMeasurementApp.Menu
                 Console.WriteLine("3) Generic Length Equality (UC3)");
                 Console.WriteLine("4) Unit Conversion (UC5)");
                 Console.WriteLine("5) Length Addition (UC6)");
+                Console.WriteLine("6) Length Addition with Target Unit (UC7)");
                 Console.WriteLine("0) Exit");
                 Console.Write("Choose an option: ");
 
@@ -47,10 +48,13 @@ namespace QuantityMeasurementApp.Menu
                     case "5":
                         CheckLengthAddition();
                         break;
+                    case "6":
+                        CheckLengthAdditionWithTargetUnit();
+                        break;
                     case "0":
                         return;
                     default:
-                        Console.WriteLine("Invalid option. Please choose 1, 2, 3, 4, 5 or 0.");
+                        Console.WriteLine("Invalid option. Please choose 1, 2, 3, 4, 5, 6 or 0.");
                         break;
                 }
 
@@ -208,6 +212,31 @@ namespace QuantityMeasurementApp.Menu
                 Console.WriteLine(
                     "Invalid unit. Supported units: feet/ft, inch/in/inches, yard/yards/yd, cm/centimeter/centimeters.");
             }
+        }
+
+        private void CheckLengthAdditionWithTargetUnit()
+        {
+            double firstValue = ReadValidFiniteDouble("Enter first value: ");
+            LengthUnit firstUnit = ReadValidLengthUnit(
+                "Enter first unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+
+            double secondValue = ReadValidFiniteDouble("Enter second value: ");
+            LengthUnit secondUnit = ReadValidLengthUnit(
+                "Enter second unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+
+            LengthUnit targetUnit = ReadValidLengthUnit(
+                "Enter target unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+
+            QuantityLength firstLength = new QuantityLength(firstValue, firstUnit);
+            QuantityLength secondLength = new QuantityLength(secondValue, secondUnit);
+
+            QuantityLength resultLength = QuantityLength.Add(firstLength, secondLength, targetUnit);
+
+            Console.WriteLine(
+                $"You entered: {firstLength.Value:0.######} {firstLength.Unit.ToDisplayString()} and {secondLength.Value:0.######} {secondLength.Unit.ToDisplayString()}");
+
+            Console.WriteLine($"Target unit: {targetUnit.ToDisplayString()}");
+            Console.WriteLine($"Result: {resultLength.Value:0.######} {resultLength.Unit.ToDisplayString()}");
         }
 
         private static string ToConversionDisplayUnit(LengthUnit lengthUnit)

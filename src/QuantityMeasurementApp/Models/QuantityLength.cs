@@ -141,30 +141,37 @@ namespace QuantityMeasurementApp.Models
             }
             return Add(firstLength, secondLength, firstLength.Unit);
         }
-        public static QuantityLength Add(QuantityLength firstLength, QuantityLength secondLength, LengthUnit targetUnit)
+        public static QuantityLength Add(QuantityLength firstLength, QuantityLength secondLength, LengthUnit? targetUnit)
         {
-            if(ReferenceEquals(firstLength, null))
+            if (ReferenceEquals(firstLength, null))
             {
                 throw new ArgumentNullException(nameof(firstLength), "First length cannot be null.");
             }
-            if(ReferenceEquals(secondLength, null))
+
+            if (ReferenceEquals(secondLength, null))
             {
-                throw new ArgumentNullException(nameof(secondLength), "Second Length cannot be emoty.");
+                throw new ArgumentNullException(nameof(secondLength), "Second length cannot be null.");
             }
-            if(!Enum.IsDefined(typeof(LengthUnit), targetUnit))
+
+            if (targetUnit is null)
+            {
+                throw new ArgumentNullException(nameof(targetUnit), "Target unit cannot be null.");
+            }
+
+            if (!Enum.IsDefined(typeof(LengthUnit), targetUnit.Value))
             {
                 throw new ArgumentException("Unsupported target length unit.", nameof(targetUnit));
             }
 
             // Normalize both operands to a common base unit (inches), then add.
-            double firstValueToInches = Convert(firstLength.Value, firstLength.Unit, LengthUnit.Inch);
-            double secondValueToInches = Convert(secondLength.Value, secondLength.Unit, LengthUnit.Inch);
-            double sumInInches = firstValueToInches + secondValueToInches;
+            double firstValueInInches = Convert(firstLength.Value, firstLength.Unit, LengthUnit.Inch);
+            double secondValueInInches = Convert(secondLength.Value, secondLength.Unit, LengthUnit.Inch);
+            double sumInInches = firstValueInInches + secondValueInInches;
 
             // Convert the sum into the requested target unit.
-            double sumInTargetUnit = Convert(sumInInches, LengthUnit.Inch, targetUnit);
+            double sumInTargetUnit = Convert(sumInInches, LengthUnit.Inch, targetUnit.Value);
 
-            return new QuantityLength(sumInTargetUnit, targetUnit);
+            return new QuantityLength(sumInTargetUnit, targetUnit.Value);
         }
 
         private double ConvertToInches()
