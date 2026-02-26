@@ -50,10 +50,10 @@ namespace QuantityMeasurementApp.Models
                 return true;
             }
 
-            double thisValueInInches = ConvertToInches();
-            double otherValueInInches = otherLength.ConvertToInches();
+            double thisValueInFeet = ConvertToBaseFeet();
+            double otherValueInFeet = otherLength.ConvertToBaseFeet();
 
-            return thisValueInInches.CompareTo(otherValueInInches) == 0;
+            return thisValueInFeet.CompareTo(otherValueInFeet) == 0;
         }
 
         public override bool Equals(object? obj)
@@ -73,7 +73,7 @@ namespace QuantityMeasurementApp.Models
 
         public override int GetHashCode()
         {
-            return ConvertToInches().GetHashCode();
+            return ConvertToBaseFeet().GetHashCode();
         }
 
         public override string ToString()
@@ -110,12 +110,8 @@ namespace QuantityMeasurementApp.Models
                 throw new ArgumentException("Unsupported target length unit.", nameof(targetUnit));
             }
 
-            double sourceFactorToInches = sourceUnit.Value.GetConversionFactorToInches();
-            double targetFactorToInches = targetUnit.Value.GetConversionFactorToInches();
-
-            // Convert using the common base unit (inches):
-            // result = value × (sourceFactor / targetFactor)
-            return measurementValue * (sourceFactorToInches / targetFactorToInches);
+            double baseFeetValue = sourceUnit.Value.ConvertToBaseUnit(measurementValue);
+            return targetUnit.Value.ConvertFromBaseUnit(baseFeetValue);
         }
 
         public QuantityLength ConvertTo(LengthUnit targetUnit)
@@ -126,7 +122,11 @@ namespace QuantityMeasurementApp.Models
             }
 
             double convertedValue = Convert(measurementValue, lengthUnit, targetUnit);
-            return new QuantityLength(convertedValue, targetUnit);
+
+            // UC8 rounding requirement: only apply rounding in ConvertTo (instance method).
+            double roundedValue = Math.Round(convertedValue, 2, MidpointRounding.AwayFromZero);
+
+            return new QuantityLength(roundedValue, targetUnit);
         }
 
         public static QuantityLength Add(QuantityLength firstLength, QuantityLength secondLength)
@@ -163,15 +163,17 @@ namespace QuantityMeasurementApp.Models
                 throw new ArgumentException("Unsupported target length unit.", nameof(targetUnit));
             }
 
-            // Normalize both operands to a common base unit (inches), then add.
-            double firstValueInInches = Convert(firstLength.Value, firstLength.Unit, LengthUnit.Inch);
-            double secondValueInInches = Convert(secondLength.Value, secondLength.Unit, LengthUnit.Inch);
-            double sumInInches = firstValueInInches + secondValueInInches;
+            double firstValueInFeet = firstLength.Unit.ConvertToBaseUnit(firstLength.Value);
+            double secondValueInFeet = secondLength.Unit.ConvertToBaseUnit(secondLength.Value);
+            double sumInFeet = firstValueInFeet + secondValueInFeet;
 
-            // Convert the sum into the requested target unit.
-            double sumInTargetUnit = Convert(sumInInches, LengthUnit.Inch, targetUnit.Value);
-
+            double sumInTargetUnit = targetUnit.Value.ConvertFromBaseUnit(sumInFeet);
             return new QuantityLength(sumInTargetUnit, targetUnit.Value);
+        }
+
+        private double ConvertToBaseFeet()
+        {
+            return lengthUnit.ConvertToBaseUnit(measurementValue);
         }
 
         private double ConvertToInches()
