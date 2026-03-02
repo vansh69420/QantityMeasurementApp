@@ -1,39 +1,27 @@
 using System;
-using System.Globalization;
+using QuantityMeasurementApp.Interfaces;
+using QuantityMeasurementApp.Services;
 
 namespace QuantityMeasurementApp.Models
 {
     /// <summary>
-    /// Immutable value object representing a weight quantity with a value and unit.
-    /// Base unit is kilogram; conversions are delegated to <see cref="WeightUnitConversionExtensions"/>.
+    /// Backward-compatible weight quantity wrapper.
+    /// Internally delegates to the generic <see cref="Quantity{TUnit}"/> (UC10).
     /// </summary>
     public sealed class QuantityWeight : IEquatable<QuantityWeight>
     {
-        // Used to make equality stable with approximate pound conversions.
-        private const int BaseUnitComparisonDecimalPlaces = 5;
+        private static readonly IMeasurable<WeightUnit> weightMeasurableService = new WeightMeasurableService();
 
-        private readonly double measurementValue;
-        private readonly WeightUnit weightUnit;
+        private readonly Quantity<WeightUnit> quantity;
 
         public QuantityWeight(double measurementValue, WeightUnit weightUnit)
         {
-            if (double.IsNaN(measurementValue) || double.IsInfinity(measurementValue))
-            {
-                throw new ArgumentException("Weight value must be a finite number.", nameof(measurementValue));
-            }
-
-            if (!Enum.IsDefined(typeof(WeightUnit), weightUnit))
-            {
-                throw new ArgumentException("Unsupported weight unit.", nameof(weightUnit));
-            }
-
-            this.measurementValue = measurementValue;
-            this.weightUnit = weightUnit;
+            quantity = new Quantity<WeightUnit>(measurementValue, weightUnit, weightMeasurableService);
         }
 
-        public double Value => measurementValue;
+        public double Value => quantity.Value;
 
-        public WeightUnit Unit => weightUnit;
+        public WeightUnit Unit => quantity.Unit;
 
         public static QuantityWeight Create(double measurementValue, string? unitText)
         {
@@ -53,10 +41,7 @@ namespace QuantityMeasurementApp.Models
                 return true;
             }
 
-            double thisBaseKilograms = ConvertToBaseKilogramsRounded();
-            double otherBaseKilograms = otherWeight.ConvertToBaseKilogramsRounded();
-
-            return thisBaseKilograms.CompareTo(otherBaseKilograms) == 0;
+            return quantity.Equals(otherWeight.quantity);
         }
 
         public override bool Equals(object? obj)
@@ -76,16 +61,17 @@ namespace QuantityMeasurementApp.Models
 
         public override int GetHashCode()
         {
-            return ConvertToBaseKilogramsRounded().GetHashCode();
+            return quantity.GetHashCode();
         }
 
         public override string ToString()
         {
-            string formattedValue = measurementValue.ToString("0.0", CultureInfo.InvariantCulture);
-            string unitText = weightUnit.ToDisplayString();
-            return $"Quantity({formattedValue}, \"{unitText}\")";
+            return quantity.ToString();
         }
 
+        /// <summary>
+        /// Static conversion API (must remain full precision, no rounding).
+        /// </summary>
         public static double Convert(double measurementValue, WeightUnit? sourceUnit, WeightUnit? targetUnit)
         {
             if (double.IsNaN(measurementValue) || double.IsInfinity(measurementValue))
@@ -113,20 +99,17 @@ namespace QuantityMeasurementApp.Models
                 throw new ArgumentException("Unsupported target weight unit.", nameof(targetUnit));
             }
 
-            double baseKilogramsValue = sourceUnit.Value.ConvertToBaseUnit(measurementValue);
-            return targetUnit.Value.ConvertFromBaseUnit(baseKilogramsValue);
+            double baseKilogramsValue = weightMeasurableService.ConvertToBaseUnit(sourceUnit.Value, measurementValue);
+            return weightMeasurableService.ConvertFromBaseUnit(targetUnit.Value, baseKilogramsValue);
         }
 
-        // UC9 P1: ConvertTo keeps full precision (no rounding here).
+        /// <summary>
+        /// UC9 P1: ConvertTo keeps full precision (no rounding policy for weight).
+        /// </summary>
         public QuantityWeight ConvertTo(WeightUnit targetUnit)
         {
-            if (!Enum.IsDefined(typeof(WeightUnit), targetUnit))
-            {
-                throw new ArgumentException("Unsupported target weight unit.", nameof(targetUnit));
-            }
-
-            double convertedValue = Convert(measurementValue, weightUnit, targetUnit);
-            return new QuantityWeight(convertedValue, targetUnit);
+            Quantity<WeightUnit> converted = quantity.ConvertTo(targetUnit);
+            return new QuantityWeight(converted.Value, converted.Unit);
         }
 
         public static QuantityWeight Add(QuantityWeight firstWeight, QuantityWeight secondWeight)
@@ -141,7 +124,8 @@ namespace QuantityMeasurementApp.Models
                 throw new ArgumentNullException(nameof(secondWeight), "Second weight cannot be null.");
             }
 
-            return Add(firstWeight, secondWeight, firstWeight.Unit);
+            Quantity<WeightUnit> resultQuantity = firstWeight.quantity.Add(secondWeight.quantity);
+            return new QuantityWeight(resultQuantity.Value, resultQuantity.Unit);
         }
 
         public static QuantityWeight Add(QuantityWeight firstWeight, QuantityWeight secondWeight, WeightUnit? targetUnit)
@@ -156,22 +140,8 @@ namespace QuantityMeasurementApp.Models
                 throw new ArgumentNullException(nameof(secondWeight), "Second weight cannot be null.");
             }
 
-            if (targetUnit is null)
-            {
-                throw new ArgumentNullException(nameof(targetUnit), "Target unit cannot be null.");
-            }
-
-            if (!Enum.IsDefined(typeof(WeightUnit), targetUnit.Value))
-            {
-                throw new ArgumentException("Unsupported target weight unit.", nameof(targetUnit));
-            }
-
-            double firstValueInKilograms = firstWeight.Unit.ConvertToBaseUnit(firstWeight.Value);
-            double secondValueInKilograms = secondWeight.Unit.ConvertToBaseUnit(secondWeight.Value);
-            double sumInKilograms = firstValueInKilograms + secondValueInKilograms;
-
-            double sumInTargetUnit = targetUnit.Value.ConvertFromBaseUnit(sumInKilograms);
-            return new QuantityWeight(sumInTargetUnit, targetUnit.Value);
+            Quantity<WeightUnit> resultQuantity = firstWeight.quantity.Add(secondWeight.quantity, targetUnit);
+            return new QuantityWeight(resultQuantity.Value, resultQuantity.Unit);
         }
 
         public static QuantityWeight Add(
@@ -181,46 +151,10 @@ namespace QuantityMeasurementApp.Models
             WeightUnit secondUnit,
             WeightUnit? targetUnit)
         {
-            if (double.IsNaN(firstValue) || double.IsInfinity(firstValue))
-            {
-                throw new ArgumentException("First weight value must be a finite number.", nameof(firstValue));
-            }
-
-            if (double.IsNaN(secondValue) || double.IsInfinity(secondValue))
-            {
-                throw new ArgumentException("Second weight value must be a finite number.", nameof(secondValue));
-            }
-
-            if (!Enum.IsDefined(typeof(WeightUnit), firstUnit))
-            {
-                throw new ArgumentException("Unsupported first weight unit.", nameof(firstUnit));
-            }
-
-            if (!Enum.IsDefined(typeof(WeightUnit), secondUnit))
-            {
-                throw new ArgumentException("Unsupported second weight unit.", nameof(secondUnit));
-            }
-
-            if (targetUnit is null)
-            {
-                throw new ArgumentNullException(nameof(targetUnit), "Target unit cannot be null.");
-            }
-
-            if (!Enum.IsDefined(typeof(WeightUnit), targetUnit.Value))
-            {
-                throw new ArgumentException("Unsupported target weight unit.", nameof(targetUnit));
-            }
-
             QuantityWeight firstWeight = new QuantityWeight(firstValue, firstUnit);
             QuantityWeight secondWeight = new QuantityWeight(secondValue, secondUnit);
 
             return Add(firstWeight, secondWeight, targetUnit);
-        }
-
-        private double ConvertToBaseKilogramsRounded()
-        {
-            double baseKilograms = weightUnit.ConvertToBaseUnit(measurementValue);
-            return Math.Round(baseKilograms, BaseUnitComparisonDecimalPlaces, MidpointRounding.AwayFromZero);
         }
     }
 }
