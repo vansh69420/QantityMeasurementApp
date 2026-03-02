@@ -2,11 +2,15 @@ using System;
 using System.Globalization;
 using QuantityMeasurementApp.Interfaces;
 using QuantityMeasurementApp.Models;
+using QuantityMeasurementApp.Services;
 
 namespace QuantityMeasurementApp.Menu
 {
     public sealed class QuantityMeasurementMenu
     {
+        private static readonly IMeasurable<LengthUnit> lengthMeasurableService = new LengthMeasurableService();
+        private static readonly IMeasurable<WeightUnit> weightMeasurableService = new WeightMeasurableService();
+
         private readonly IQuantityMeasurementService quantityMeasurementService;
 
         public QuantityMeasurementMenu(IQuantityMeasurementService quantityMeasurementService)
@@ -65,16 +69,29 @@ namespace QuantityMeasurementApp.Menu
                 switch (option)
                 {
                     case "1":
-                        CheckGenericLengthEquality();
+                        RunGenericEquality(
+                            lengthMeasurableService,
+                            ReadValidLengthUnit,
+                            "Enter unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
                         break;
                     case "2":
-                        CheckLengthConversion();
+                        RunGenericStaticConversion(
+                            ReadValidLengthUnit,
+                            ToLengthConversionDisplayUnit,
+                            QuantityLength.Convert,
+                            "Enter unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
                         break;
                     case "3":
-                        CheckLengthAddition();
+                        RunGenericAddition(
+                            lengthMeasurableService,
+                            ReadValidLengthUnit,
+                            "Enter unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
                         break;
                     case "4":
-                        CheckLengthAdditionWithTargetUnit();
+                        RunGenericAdditionWithTargetUnit(
+                            lengthMeasurableService,
+                            ReadValidLengthUnit,
+                            "Enter unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
                         break;
                     case "5":
                         CheckFeetEquality();
@@ -110,16 +127,29 @@ namespace QuantityMeasurementApp.Menu
                 switch (option)
                 {
                     case "1":
-                        CheckWeightEquality();
+                        RunGenericEquality(
+                            weightMeasurableService,
+                            ReadValidWeightUnit,
+                            "Enter unit (kg/kilogram/kilograms, g/gram/grams, lb/pound/pounds): ");
                         break;
                     case "2":
-                        CheckWeightConversion();
+                        RunGenericStaticConversion(
+                            ReadValidWeightUnit,
+                            ToWeightConversionDisplayUnit,
+                            QuantityWeight.Convert,
+                            "Enter unit (kg/kilogram/kilograms, g/gram/grams, lb/pound/pounds): ");
                         break;
                     case "3":
-                        CheckWeightAddition();
+                        RunGenericAddition(
+                            weightMeasurableService,
+                            ReadValidWeightUnit,
+                            "Enter unit (kg/kilogram/kilograms, g/gram/grams, lb/pound/pounds): ");
                         break;
                     case "4":
-                        CheckWeightAdditionWithTargetUnit();
+                        RunGenericAdditionWithTargetUnit(
+                            weightMeasurableService,
+                            ReadValidWeightUnit,
+                            "Enter unit (kg/kilogram/kilograms, g/gram/grams, lb/pound/pounds): ");
                         break;
                     case "0":
                         return;
@@ -132,7 +162,7 @@ namespace QuantityMeasurementApp.Menu
             }
         }
 
-        // ---------------- LENGTH (existing UCs) ----------------
+        // ---------------- Legacy UC1 / UC2 ----------------
 
         private void CheckFeetEquality()
         {
@@ -162,169 +192,95 @@ namespace QuantityMeasurementApp.Menu
             Console.WriteLine($"They are equal: {isEqual}");
         }
 
-        private void CheckGenericLengthEquality()
+        // ---------------- Generic demo helpers (UC10 intent) ----------------
+
+        private static void RunGenericEquality<TUnit>(
+            IMeasurable<TUnit> measurable,
+            Func<string, TUnit> unitReader,
+            string unitPromptMessage)
+            where TUnit : struct, Enum
         {
             double firstValue = ReadValidFiniteDouble("Enter first value: ");
-            LengthUnit firstUnit = ReadValidLengthUnit(
-                "Enter first unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+            TUnit firstUnit = unitReader(unitPromptMessage);
 
             double secondValue = ReadValidFiniteDouble("Enter second value: ");
-            LengthUnit secondUnit = ReadValidLengthUnit(
-                "Enter second unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+            TUnit secondUnit = unitReader(unitPromptMessage);
 
-            QuantityLength firstLength = new QuantityLength(firstValue, firstUnit);
-            QuantityLength secondLength = new QuantityLength(secondValue, secondUnit);
+            Quantity<TUnit> firstQuantity = new Quantity<TUnit>(firstValue, firstUnit, measurable);
+            Quantity<TUnit> secondQuantity = new Quantity<TUnit>(secondValue, secondUnit, measurable);
 
-            bool isEqual = quantityMeasurementService.AreEqual(firstLength, secondLength);
+            bool isEqual = firstQuantity.Equals(secondQuantity);
 
-            Console.WriteLine($"You entered: {firstLength} and {secondLength}");
+            Console.WriteLine($"You entered: {firstQuantity} and {secondQuantity}");
             Console.WriteLine($"They are equal: {isEqual}");
         }
 
-        private void CheckLengthConversion()
+        private static void RunGenericStaticConversion<TUnit>(
+            Func<string, TUnit> unitReader,
+            Func<TUnit, string> toDisplayUnit,
+            Func<double, TUnit?, TUnit?, double> convertFunction,
+            string unitPromptMessage)
+            where TUnit : struct, Enum
         {
             double measurementValue = ReadValidFiniteDouble("Enter value to convert: ");
+            TUnit sourceUnit = unitReader($"Enter source unit {unitPromptMessage}");
+            TUnit targetUnit = unitReader($"Enter target unit {unitPromptMessage}");
 
-            LengthUnit sourceUnit = ReadValidLengthUnit(
-                "Enter source unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
-
-            LengthUnit targetUnit = ReadValidLengthUnit(
-                "Enter target unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
-
-            double convertedValue = QuantityLength.Convert(measurementValue, sourceUnit, targetUnit);
+            double convertedValue = convertFunction(measurementValue, sourceUnit, targetUnit);
 
             string formattedInputValue = measurementValue.ToString("0.######", CultureInfo.InvariantCulture);
             string formattedOutputValue = convertedValue.ToString("0.######", CultureInfo.InvariantCulture);
 
             Console.WriteLine(
-                $"Input: convert({formattedInputValue}, {ToLengthConversionDisplayUnit(sourceUnit)}, {ToLengthConversionDisplayUnit(targetUnit)}) -> Output: {formattedOutputValue}");
+                $"Input: convert({formattedInputValue}, {toDisplayUnit(sourceUnit)}, {toDisplayUnit(targetUnit)}) -> Output: {formattedOutputValue}");
         }
 
-        private void CheckLengthAddition()
+        private static void RunGenericAddition<TUnit>(
+            IMeasurable<TUnit> measurable,
+            Func<string, TUnit> unitReader,
+            string unitPromptMessage)
+            where TUnit : struct, Enum
         {
             double firstValue = ReadValidFiniteDouble("Enter first value: ");
-            LengthUnit firstUnit = ReadValidLengthUnit(
-                "Enter first unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+            TUnit firstUnit = unitReader(unitPromptMessage);
 
             double secondValue = ReadValidFiniteDouble("Enter second value: ");
-            LengthUnit secondUnit = ReadValidLengthUnit(
-                "Enter second unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+            TUnit secondUnit = unitReader(unitPromptMessage);
 
-            QuantityLength firstLength = new QuantityLength(firstValue, firstUnit);
-            QuantityLength secondLength = new QuantityLength(secondValue, secondUnit);
+            Quantity<TUnit> firstQuantity = new Quantity<TUnit>(firstValue, firstUnit, measurable);
+            Quantity<TUnit> secondQuantity = new Quantity<TUnit>(secondValue, secondUnit, measurable);
 
-            QuantityLength resultLength = QuantityLength.Add(firstLength, secondLength);
+            Quantity<TUnit> resultQuantity = firstQuantity.Add(secondQuantity);
 
-            Console.WriteLine($"You entered: {firstLength.Value:0.######} {firstLength.Unit.ToDisplayString()} and {secondLength.Value:0.######} {secondLength.Unit.ToDisplayString()}");
-            Console.WriteLine($"Result: {resultLength.Value:0.######} {resultLength.Unit.ToDisplayString()}");
+            Console.WriteLine($"You entered: {firstQuantity.Value:0.######} {measurable.GetUnitName(firstQuantity.Unit)} and {secondQuantity.Value:0.######} {measurable.GetUnitName(secondQuantity.Unit)}");
+            Console.WriteLine($"Result: {resultQuantity.Value:0.######} {measurable.GetUnitName(resultQuantity.Unit)}");
         }
 
-        private void CheckLengthAdditionWithTargetUnit()
+        private static void RunGenericAdditionWithTargetUnit<TUnit>(
+            IMeasurable<TUnit> measurable,
+            Func<string, TUnit> unitReader,
+            string unitPromptMessage)
+            where TUnit : struct, Enum
         {
             double firstValue = ReadValidFiniteDouble("Enter first value: ");
-            LengthUnit firstUnit = ReadValidLengthUnit(
-                "Enter first unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+            TUnit firstUnit = unitReader(unitPromptMessage);
 
             double secondValue = ReadValidFiniteDouble("Enter second value: ");
-            LengthUnit secondUnit = ReadValidLengthUnit(
-                "Enter second unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+            TUnit secondUnit = unitReader(unitPromptMessage);
 
-            LengthUnit targetUnit = ReadValidLengthUnit(
-                "Enter target unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+            TUnit targetUnit = unitReader("Enter target unit " + unitPromptMessage);
 
-            QuantityLength firstLength = new QuantityLength(firstValue, firstUnit);
-            QuantityLength secondLength = new QuantityLength(secondValue, secondUnit);
+            Quantity<TUnit> firstQuantity = new Quantity<TUnit>(firstValue, firstUnit, measurable);
+            Quantity<TUnit> secondQuantity = new Quantity<TUnit>(secondValue, secondUnit, measurable);
 
-            QuantityLength resultLength = QuantityLength.Add(firstLength, secondLength, targetUnit);
+            Quantity<TUnit> resultQuantity = firstQuantity.Add(secondQuantity, targetUnit);
 
-            Console.WriteLine($"You entered: {firstLength.Value:0.######} {firstLength.Unit.ToDisplayString()} and {secondLength.Value:0.######} {secondLength.Unit.ToDisplayString()}");
-            Console.WriteLine($"Target unit: {targetUnit.ToDisplayString()}");
-            Console.WriteLine($"Result: {resultLength.Value:0.######} {resultLength.Unit.ToDisplayString()}");
+            Console.WriteLine($"You entered: {firstQuantity.Value:0.######} {measurable.GetUnitName(firstQuantity.Unit)} and {secondQuantity.Value:0.######} {measurable.GetUnitName(secondQuantity.Unit)}");
+            Console.WriteLine($"Target unit: {measurable.GetUnitName(targetUnit)}");
+            Console.WriteLine($"Result: {resultQuantity.Value:0.######} {measurable.GetUnitName(resultQuantity.Unit)}");
         }
 
-        private static string ToLengthConversionDisplayUnit(LengthUnit lengthUnit)
-        {
-            return lengthUnit switch
-            {
-                LengthUnit.Feet => "FEET",
-                LengthUnit.Inch => "INCHES",
-                LengthUnit.Yard => "YARDS",
-                LengthUnit.Centimeter => "CENTIMETERS",
-                _ => lengthUnit.ToString().ToUpperInvariant()
-            };
-        }
-
-        // ---------------- WEIGHT (UC9) ----------------
-
-        private void CheckWeightEquality()
-        {
-            double firstValue = ReadValidFiniteDouble("Enter first value: ");
-            WeightUnit firstUnit = ReadValidWeightUnit("Enter first unit (kg/kilogram/kilograms, g/gram/grams, lb/pound/pounds): ");
-
-            double secondValue = ReadValidFiniteDouble("Enter second value: ");
-            WeightUnit secondUnit = ReadValidWeightUnit("Enter second unit (kg/kilogram/kilograms, g/gram/grams, lb/pound/pounds): ");
-
-            QuantityWeight firstWeight = new QuantityWeight(firstValue, firstUnit);
-            QuantityWeight secondWeight = new QuantityWeight(secondValue, secondUnit);
-
-            bool isEqual = firstWeight.Equals(secondWeight);
-
-            Console.WriteLine($"You entered: {firstWeight} and {secondWeight}");
-            Console.WriteLine($"They are equal: {isEqual}");
-        }
-
-        private void CheckWeightConversion()
-        {
-            double measurementValue = ReadValidFiniteDouble("Enter value to convert: ");
-            WeightUnit sourceUnit = ReadValidWeightUnit("Enter source unit (kg/kilogram/kilograms, g/gram/grams, lb/pound/pounds): ");
-            WeightUnit targetUnit = ReadValidWeightUnit("Enter target unit (kg/kilogram/kilograms, g/gram/grams, lb/pound/pounds): ");
-
-            double convertedValue = QuantityWeight.Convert(measurementValue, sourceUnit, targetUnit);
-
-            string formattedInputValue = measurementValue.ToString("0.######", CultureInfo.InvariantCulture);
-            string formattedOutputValue = convertedValue.ToString("0.######", CultureInfo.InvariantCulture);
-
-            Console.WriteLine($"Input: convert({formattedInputValue}, {sourceUnit.ToString().ToUpperInvariant()}, {targetUnit.ToString().ToUpperInvariant()}) -> Output: {formattedOutputValue}");
-        }
-
-        private void CheckWeightAddition()
-        {
-            double firstValue = ReadValidFiniteDouble("Enter first value: ");
-            WeightUnit firstUnit = ReadValidWeightUnit("Enter first unit (kg/kilogram/kilograms, g/gram/grams, lb/pound/pounds): ");
-
-            double secondValue = ReadValidFiniteDouble("Enter second value: ");
-            WeightUnit secondUnit = ReadValidWeightUnit("Enter second unit (kg/kilogram/kilograms, g/gram/grams, lb/pound/pounds): ");
-
-            QuantityWeight firstWeight = new QuantityWeight(firstValue, firstUnit);
-            QuantityWeight secondWeight = new QuantityWeight(secondValue, secondUnit);
-
-            QuantityWeight resultWeight = QuantityWeight.Add(firstWeight, secondWeight);
-
-            Console.WriteLine($"You entered: {firstWeight.Value:0.######} {firstWeight.Unit.ToDisplayString()} and {secondWeight.Value:0.######} {secondWeight.Unit.ToDisplayString()}");
-            Console.WriteLine($"Result: {resultWeight.Value:0.######} {resultWeight.Unit.ToDisplayString()}");
-        }
-
-        private void CheckWeightAdditionWithTargetUnit()
-        {
-            double firstValue = ReadValidFiniteDouble("Enter first value: ");
-            WeightUnit firstUnit = ReadValidWeightUnit("Enter first unit (kg/kilogram/kilograms, g/gram/grams, lb/pound/pounds): ");
-
-            double secondValue = ReadValidFiniteDouble("Enter second value: ");
-            WeightUnit secondUnit = ReadValidWeightUnit("Enter second unit (kg/kilogram/kilograms, g/gram/grams, lb/pound/pounds): ");
-
-            WeightUnit targetUnit = ReadValidWeightUnit("Enter target unit (kg/kilogram/kilograms, g/gram/grams, lb/pound/pounds): ");
-
-            QuantityWeight firstWeight = new QuantityWeight(firstValue, firstUnit);
-            QuantityWeight secondWeight = new QuantityWeight(secondValue, secondUnit);
-
-            QuantityWeight resultWeight = QuantityWeight.Add(firstWeight, secondWeight, targetUnit);
-
-            Console.WriteLine($"You entered: {firstWeight.Value:0.######} {firstWeight.Unit.ToDisplayString()} and {secondWeight.Value:0.######} {secondWeight.Unit.ToDisplayString()}");
-            Console.WriteLine($"Target unit: {targetUnit.ToDisplayString()}");
-            Console.WriteLine($"Result: {resultWeight.Value:0.######} {resultWeight.Unit.ToDisplayString()}");
-        }
-
-        // ---------------- Shared input helpers ----------------
+        // ---------------- Input helpers ----------------
 
         private static double ReadValidFiniteDouble(string promptMessage)
         {
@@ -402,6 +358,23 @@ namespace QuantityMeasurementApp.Menu
 
                 Console.WriteLine("Invalid unit. Supported units: kg/kilogram/kilograms, g/gram/grams, lb/pound/pounds.");
             }
+        }
+
+        private static string ToLengthConversionDisplayUnit(LengthUnit lengthUnit)
+        {
+            return lengthUnit switch
+            {
+                LengthUnit.Feet => "FEET",
+                LengthUnit.Inch => "INCHES",
+                LengthUnit.Yard => "YARDS",
+                LengthUnit.Centimeter => "CENTIMETERS",
+                _ => lengthUnit.ToString().ToUpperInvariant()
+            };
+        }
+
+        private static string ToWeightConversionDisplayUnit(WeightUnit weightUnit)
+        {
+            return weightUnit.ToString().ToUpperInvariant();
         }
     }
 }
