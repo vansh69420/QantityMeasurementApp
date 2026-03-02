@@ -1,36 +1,27 @@
 using System;
-using System.Globalization;
+using QuantityMeasurementApp.Interfaces;
+using QuantityMeasurementApp.Services;
 
 namespace QuantityMeasurementApp.Models
 {
     /// <summary>
-    /// Generic length quantity that holds a numeric value and a unit.
-    /// Equality converts both quantities to a common base unit (inches) before comparison.
+    /// Backward-compatible length quantity wrapper.
+    /// Internally delegates to the generic <see cref="Quantity{TUnit}"/> (UC10).
     /// </summary>
     public sealed class QuantityLength : IEquatable<QuantityLength>
     {
-        private readonly double measurementValue;
-        private readonly LengthUnit lengthUnit;
+        private static readonly IMeasurable<LengthUnit> lengthMeasurableService = new LengthMeasurableService();
+
+        private readonly Quantity<LengthUnit> quantity;
 
         public QuantityLength(double measurementValue, LengthUnit lengthUnit)
         {
-            if (double.IsNaN(measurementValue) || double.IsInfinity(measurementValue))
-            {
-                throw new ArgumentException("Length value must be a finite number.", nameof(measurementValue));
-            }
-
-            if (!Enum.IsDefined(typeof(LengthUnit), lengthUnit))
-            {
-                throw new ArgumentException("Unsupported length unit.", nameof(lengthUnit));
-            }
-
-            this.measurementValue = measurementValue;
-            this.lengthUnit = lengthUnit;
+            quantity = new Quantity<LengthUnit>(measurementValue, lengthUnit, lengthMeasurableService);
         }
 
-        public double Value => measurementValue;
+        public double Value => quantity.Value;
 
-        public LengthUnit Unit => lengthUnit;
+        public LengthUnit Unit => quantity.Unit;
 
         public static QuantityLength Create(double measurementValue, string? unitText)
         {
@@ -50,10 +41,7 @@ namespace QuantityMeasurementApp.Models
                 return true;
             }
 
-            double thisValueInFeet = ConvertToBaseFeet();
-            double otherValueInFeet = otherLength.ConvertToBaseFeet();
-
-            return thisValueInFeet.CompareTo(otherValueInFeet) == 0;
+            return quantity.Equals(otherLength.quantity);
         }
 
         public override bool Equals(object? obj)
@@ -73,16 +61,17 @@ namespace QuantityMeasurementApp.Models
 
         public override int GetHashCode()
         {
-            return ConvertToBaseFeet().GetHashCode();
+            return quantity.GetHashCode();
         }
 
         public override string ToString()
         {
-            string formattedValue = measurementValue.ToString("0.0", CultureInfo.InvariantCulture);
-            string unitText = lengthUnit.ToDisplayString();
-            return $"Quantity({formattedValue}, \"{unitText}\")";
+            return quantity.ToString();
         }
 
+        /// <summary>
+        /// UC5-style static conversion API (must remain unrounded).
+        /// </summary>
         public static double Convert(double measurementValue, LengthUnit? sourceUnit, LengthUnit? targetUnit)
         {
             if (double.IsNaN(measurementValue) || double.IsInfinity(measurementValue))
@@ -110,37 +99,35 @@ namespace QuantityMeasurementApp.Models
                 throw new ArgumentException("Unsupported target length unit.", nameof(targetUnit));
             }
 
-            double baseFeetValue = sourceUnit.Value.ConvertToBaseUnit(measurementValue);
-            return targetUnit.Value.ConvertFromBaseUnit(baseFeetValue);
+            double baseFeetValue = lengthMeasurableService.ConvertToBaseUnit(sourceUnit.Value, measurementValue);
+            return lengthMeasurableService.ConvertFromBaseUnit(targetUnit.Value, baseFeetValue);
         }
 
+        /// <summary>
+        /// UC8-style instance conversion API (rounding policy is applied inside generic Quantity.ConvertTo()).
+        /// </summary>
         public QuantityLength ConvertTo(LengthUnit targetUnit)
         {
-            if (!Enum.IsDefined(typeof(LengthUnit), targetUnit))
-            {
-                throw new ArgumentException("Unsupported target length unit.", nameof(targetUnit));
-            }
-
-            double convertedValue = Convert(measurementValue, lengthUnit, targetUnit);
-
-            // UC8 rounding requirement: only apply rounding in ConvertTo (instance method).
-            double roundedValue = Math.Round(convertedValue, 2, MidpointRounding.AwayFromZero);
-
-            return new QuantityLength(roundedValue, targetUnit);
+            Quantity<LengthUnit> converted = quantity.ConvertTo(targetUnit);
+            return new QuantityLength(converted.Value, converted.Unit);
         }
 
         public static QuantityLength Add(QuantityLength firstLength, QuantityLength secondLength)
         {
-            if(ReferenceEquals(firstLength, null))
+            if (ReferenceEquals(firstLength, null))
             {
-                throw new ArgumentNullException(nameof(firstLength), "First Length cannot be null.");
+                throw new ArgumentNullException(nameof(firstLength), "First length cannot be null.");
             }
-            if(ReferenceEquals(secondLength, null))
+
+            if (ReferenceEquals(secondLength, null))
             {
-                throw new ArgumentNullException(nameof(secondLength), "Second Length cannot be null.");
+                throw new ArgumentNullException(nameof(secondLength), "Second length cannot be null.");
             }
-            return Add(firstLength, secondLength, firstLength.Unit);
+
+            Quantity<LengthUnit> resultQuantity = firstLength.quantity.Add(secondLength.quantity);
+            return new QuantityLength(resultQuantity.Value, resultQuantity.Unit);
         }
+
         public static QuantityLength Add(QuantityLength firstLength, QuantityLength secondLength, LengthUnit? targetUnit)
         {
             if (ReferenceEquals(firstLength, null))
@@ -153,33 +140,21 @@ namespace QuantityMeasurementApp.Models
                 throw new ArgumentNullException(nameof(secondLength), "Second length cannot be null.");
             }
 
-            if (targetUnit is null)
-            {
-                throw new ArgumentNullException(nameof(targetUnit), "Target unit cannot be null.");
-            }
-
-            if (!Enum.IsDefined(typeof(LengthUnit), targetUnit.Value))
-            {
-                throw new ArgumentException("Unsupported target length unit.", nameof(targetUnit));
-            }
-
-            double firstValueInFeet = firstLength.Unit.ConvertToBaseUnit(firstLength.Value);
-            double secondValueInFeet = secondLength.Unit.ConvertToBaseUnit(secondLength.Value);
-            double sumInFeet = firstValueInFeet + secondValueInFeet;
-
-            double sumInTargetUnit = targetUnit.Value.ConvertFromBaseUnit(sumInFeet);
-            return new QuantityLength(sumInTargetUnit, targetUnit.Value);
+            Quantity<LengthUnit> resultQuantity = firstLength.quantity.Add(secondLength.quantity, targetUnit);
+            return new QuantityLength(resultQuantity.Value, resultQuantity.Unit);
         }
 
-        private double ConvertToBaseFeet()
+        public static QuantityLength Add(
+            double firstValue,
+            LengthUnit firstUnit,
+            double secondValue,
+            LengthUnit secondUnit,
+            LengthUnit? targetUnit)
         {
-            return lengthUnit.ConvertToBaseUnit(measurementValue);
-        }
+            QuantityLength firstLength = new QuantityLength(firstValue, firstUnit);
+            QuantityLength secondLength = new QuantityLength(secondValue, secondUnit);
 
-        private double ConvertToInches()
-        {
-            double conversionFactorToInches = lengthUnit.GetConversionFactorToInches();
-            return measurementValue * conversionFactorToInches;
+            return Add(firstLength, secondLength, targetUnit);
         }
     }
 }
