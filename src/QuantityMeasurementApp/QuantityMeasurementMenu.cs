@@ -10,7 +10,7 @@ namespace QuantityMeasurementApp.Menu
     {
         private static readonly IMeasurable<LengthUnit> lengthMeasurableService = new LengthMeasurableService();
         private static readonly IMeasurable<WeightUnit> weightMeasurableService = new WeightMeasurableService();
-
+        private static readonly IMeasurable<VolumeUnit> volumeMeasurableService = new VolumeMeasurableService();
         private readonly IQuantityMeasurementService quantityMeasurementService;
 
         public QuantityMeasurementMenu(IQuantityMeasurementService quantityMeasurementService)
@@ -26,6 +26,7 @@ namespace QuantityMeasurementApp.Menu
                 Console.WriteLine("=== Quantity Measurement Main Menu ===");
                 Console.WriteLine("1) Length Operations");
                 Console.WriteLine("2) Weight Operations");
+                Console.WriteLine("3) Volume Operations");
                 Console.WriteLine("0) Exit");
                 Console.Write("Choose an option: ");
 
@@ -39,10 +40,13 @@ namespace QuantityMeasurementApp.Menu
                     case "2":
                         RunWeightMenu();
                         break;
+                    case "3":
+                        RunVolumeMenu();
+                        break;
                     case "0":
                         return;
                     default:
-                        Console.WriteLine("Invalid option. Please choose 1, 2, or 0.");
+                        Console.WriteLine("Invalid option. Please choose 1, 2, 3 or 0.");
                         break;
                 }
 
@@ -150,6 +154,58 @@ namespace QuantityMeasurementApp.Menu
                             weightMeasurableService,
                             ReadValidWeightUnit,
                             "Enter unit (kg/kilogram/kilograms, g/gram/grams, lb/pound/pounds): ");
+                        break;
+                    case "0":
+                        return;
+                    default:
+                        Console.WriteLine("Invalid option. Please choose 1-4 or 0.");
+                        break;
+                }
+
+                Console.WriteLine();
+            }
+        }
+
+        private void RunVolumeMenu()
+        {
+            while (true)
+            {
+                Console.WriteLine("=== Volume Operations (UC11) ===");
+                Console.WriteLine("1) Volume Equality");
+                Console.WriteLine("2) Volume Unit Conversion");
+                Console.WriteLine("3) Volume Addition (result in first unit)");
+                Console.WriteLine("4) Volume Addition with Target Unit");
+                Console.WriteLine("0) Back");
+                Console.Write("Choose an option: ");
+
+                string? option = Console.ReadLine();
+
+                switch (option)
+                {
+                    case "1":
+                        RunGenericEquality(
+                            volumeMeasurableService,
+                            ReadValidVolumeUnit,
+                            "Enter unit (l/litre/litres, ml/millilitre/millilitres, gal/gallon/gallons): ");
+                        break;
+                    case "2":
+                        RunGenericStaticConversion(
+                            ReadValidVolumeUnit,
+                            ToVolumeConversionDisplayUnit,
+                            ConvertVolume,
+                            "(l/litre/litres, ml/millilitre/millilitres, gal/gallon/gallons): ");
+                        break;
+                    case "3":
+                        RunGenericAddition(
+                            volumeMeasurableService,
+                            ReadValidVolumeUnit,
+                            "Enter unit (l/litre/litres, ml/millilitre/millilitres, gal/gallon/gallons): ");
+                        break;
+                    case "4":
+                        RunGenericAdditionWithTargetUnit(
+                            volumeMeasurableService,
+                            ReadValidVolumeUnit,
+                            "Enter unit (l/litre/litres, ml/millilitre/millilitres, gal/gallon/gallons): ");
                         break;
                     case "0":
                         return;
@@ -375,6 +431,58 @@ namespace QuantityMeasurementApp.Menu
         private static string ToWeightConversionDisplayUnit(WeightUnit weightUnit)
         {
             return weightUnit.ToString().ToUpperInvariant();
+        }
+
+        private static VolumeUnit ReadValidVolumeUnit(string promptMessage)
+        {
+            while (true)
+            {
+                Console.Write(promptMessage);
+                string? rawUnitText = Console.ReadLine();
+
+                if (VolumeUnitParser.TryParse(rawUnitText, out VolumeUnit parsedUnit))
+                {
+                    return parsedUnit;
+                }
+
+                Console.WriteLine("Invalid unit. Supported units: l/litre/litres, ml/millilitre/millilitres, gal/gallon/gallons.");
+            }
+        }
+
+        private static string ToVolumeConversionDisplayUnit(VolumeUnit volumeUnit)
+        {
+            return volumeUnit.ToString().ToUpperInvariant();
+        }
+
+        private static double ConvertVolume(double measurementValue, VolumeUnit? sourceUnit, VolumeUnit? targetUnit)
+        {
+            if (double.IsNaN(measurementValue) || double.IsInfinity(measurementValue))
+            {
+                throw new ArgumentException("Volume value must be a finite number.", nameof(measurementValue));
+            }
+
+            if (sourceUnit is null)
+            {
+                throw new ArgumentNullException(nameof(sourceUnit), "Source unit cannot be null.");
+            }
+
+            if (targetUnit is null)
+            {
+                throw new ArgumentNullException(nameof(targetUnit), "Target unit cannot be null.");
+            }
+
+            if (!Enum.IsDefined(typeof(VolumeUnit), sourceUnit.Value))
+            {
+                throw new ArgumentException("Unsupported source volume unit.", nameof(sourceUnit));
+            }
+
+            if (!Enum.IsDefined(typeof(VolumeUnit), targetUnit.Value))
+            {
+                throw new ArgumentException("Unsupported target volume unit.", nameof(targetUnit));
+            }
+
+            double baseLitresValue = volumeMeasurableService.ConvertToBaseUnit(sourceUnit.Value, measurementValue);
+            return volumeMeasurableService.ConvertFromBaseUnit(targetUnit.Value, baseLitresValue);
         }
     }
 }
