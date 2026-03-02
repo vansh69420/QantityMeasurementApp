@@ -144,17 +144,5 @@ namespace QuantityMeasurementApp.Models
             return new QuantityLength(resultQuantity.Value, resultQuantity.Unit);
         }
 
-        public static QuantityLength Add(
-            double firstValue,
-            LengthUnit firstUnit,
-            double secondValue,
-            LengthUnit secondUnit,
-            LengthUnit? targetUnit)
-        {
-            QuantityLength firstLength = new QuantityLength(firstValue, firstUnit);
-            QuantityLength secondLength = new QuantityLength(secondValue, secondUnit);
-
-            return Add(firstLength, secondLength, targetUnit);
-        }
     }
 }
