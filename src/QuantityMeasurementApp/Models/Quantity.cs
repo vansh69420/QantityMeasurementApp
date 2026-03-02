@@ -33,6 +33,17 @@ namespace QuantityMeasurementApp.Models
             this.unit = unit;
         }
 
+        public static Quantity<TUnit> Create(double measurementValue, TUnit? unit, IMeasurable<TUnit> measurable)
+        {
+            if (unit is null)
+            {
+                throw new ArgumentNullException(nameof(unit), "Unit cannot be null.");
+            }
+
+            return new Quantity<TUnit>(measurementValue, unit.Value, measurable);
+        }
+
+
         public double Value => measurementValue;
 
         public TUnit Unit => unit;
