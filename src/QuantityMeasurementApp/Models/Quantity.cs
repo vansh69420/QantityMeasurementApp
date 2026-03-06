@@ -168,5 +168,73 @@ namespace QuantityMeasurementApp.Models
             // Preserve existing UC behavior: do not force rounding during Add().
             return new Quantity<TUnit>(sumTargetValue, targetUnit.Value, measurable);
         }
+
+        public Quantity<TUnit> Subtract(Quantity<TUnit> otherQuantity)
+        {
+            if (ReferenceEquals(otherQuantity, null))
+            {
+                throw new ArgumentNullException(nameof(otherQuantity), "Other quantity cannot be null.");
+            }
+
+            return Subtract(otherQuantity, unit);
+        }
+
+        public Quantity<TUnit> Subtract(Quantity<TUnit> otherQuantity, TUnit? targetUnit)
+        {
+            if (ReferenceEquals(otherQuantity, null))
+            {
+                throw new ArgumentNullException(nameof(otherQuantity), "Other quantity cannot be null.");
+            }
+
+            if (measurable.GetType() != otherQuantity.measurable.GetType())
+            {
+                throw new ArgumentException("Cannot subtract quantities with different measurable implementations.", nameof(otherQuantity));
+            }
+
+            if (targetUnit is null)
+            {
+                throw new ArgumentNullException(nameof(targetUnit), "Target unit cannot be null.");
+            }
+
+            if (!measurable.IsUnitSupported(targetUnit.Value))
+            {
+                throw new ArgumentException("Unsupported target unit.", nameof(targetUnit));
+            }
+
+            double thisBaseValue = measurable.ConvertToBaseUnit(unit, measurementValue);
+            double otherBaseValue = otherQuantity.measurable.ConvertToBaseUnit(otherQuantity.unit, otherQuantity.measurementValue);
+
+            double differenceBaseValue = thisBaseValue - otherBaseValue;
+
+            double differenceTargetValue = measurable.ConvertFromBaseUnit(targetUnit.Value, differenceBaseValue);
+
+            // UC12 S1: always round subtraction results to 2 decimals.
+            double roundedDifference = Math.Round(differenceTargetValue, 2, MidpointRounding.AwayFromZero);
+
+            return new Quantity<TUnit>(roundedDifference, targetUnit.Value, measurable);
+        }
+
+        public double Divide(Quantity<TUnit> otherQuantity)
+        {
+            if (ReferenceEquals(otherQuantity, null))
+            {
+                throw new ArgumentNullException(nameof(otherQuantity), "Other quantity cannot be null.");
+            }
+
+            if (measurable.GetType() != otherQuantity.measurable.GetType())
+            {
+                throw new ArgumentException("Cannot divide quantities with different measurable implementations.", nameof(otherQuantity));
+            }
+
+            double thisBaseValue = measurable.ConvertToBaseUnit(unit, measurementValue);
+            double otherBaseValue = otherQuantity.measurable.ConvertToBaseUnit(otherQuantity.unit, otherQuantity.measurementValue);
+
+            if (otherBaseValue == 0.0)
+            {
+                throw new ArithmeticException("Division by zero is not allowed.");
+            }
+
+            return thisBaseValue / otherBaseValue;
+        }
     }
 }
