@@ -221,6 +221,7 @@ namespace QuantityMeasurementApp.Models
             {
                 throw new ArgumentException("Quantity value must be a finite number.", nameof(otherQuantity.measurementValue));
             }
+            measurable.ValidateOperationSupport(operation.ToString());
 
             if (isTargetUnitRequired)
             {
