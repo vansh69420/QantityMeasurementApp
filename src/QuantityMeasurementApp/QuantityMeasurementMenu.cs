@@ -11,6 +11,7 @@ namespace QuantityMeasurementApp.Menu
         private static readonly IMeasurable<LengthUnit> lengthMeasurableService = new LengthMeasurableService();
         private static readonly IMeasurable<WeightUnit> weightMeasurableService = new WeightMeasurableService();
         private static readonly IMeasurable<VolumeUnit> volumeMeasurableService = new VolumeMeasurableService();
+        private static readonly IMeasurable<TemperatureUnit> temperatureMeasurableService = new TemperatureMeasurableService();
         private readonly IQuantityMeasurementService quantityMeasurementService;
 
         public QuantityMeasurementMenu(IQuantityMeasurementService quantityMeasurementService)
@@ -27,6 +28,7 @@ namespace QuantityMeasurementApp.Menu
                 Console.WriteLine("1) Length Operations");
                 Console.WriteLine("2) Weight Operations");
                 Console.WriteLine("3) Volume Operations");
+                Console.WriteLine("4) Temperature Operations");
                 Console.WriteLine("0) Exit");
                 Console.Write("Choose an option: ");
 
@@ -43,10 +45,13 @@ namespace QuantityMeasurementApp.Menu
                     case "3":
                         RunVolumeMenu();
                         break;
+                    case "4":
+                        RunTemperatureMenu();
+                        break;
                     case "0":
                         return;
                     default:
-                        Console.WriteLine("Invalid option. Please choose 1, 2, 3 or 0.");
+                        Console.WriteLine("Invalid option. Please choose 1, 2, 3, 4 or 0.");
                         break;
                 }
 
@@ -280,6 +285,74 @@ namespace QuantityMeasurementApp.Menu
                         return;
                     default:
                         Console.WriteLine("Invalid option. Please choose 1-7 or 0.");
+                        break;
+                }
+
+                Console.WriteLine();
+            }
+        }
+
+        private void RunTemperatureMenu()
+        {
+            while (true)
+            {
+                Console.WriteLine("=== Temperature Operations (UC14) ===");
+                Console.WriteLine("1) Temperature Equality");
+                Console.WriteLine("2) Temperature Unit Conversion");
+                Console.WriteLine("3) Try Temperature Addition (Unsupported)");
+                Console.WriteLine("4) Try Temperature Subtraction (Unsupported)");
+                Console.WriteLine("5) Try Temperature Division (Unsupported)");
+                Console.WriteLine("0) Back");
+                Console.Write("Choose an option: ");
+
+                string? option = Console.ReadLine();
+
+                switch (option)
+                {
+                    case "1":
+                        RunGenericEquality(
+                            temperatureMeasurableService,
+                            ReadValidTemperatureUnit,
+                            "Enter unit (c/celsius, f/fahrenheit, k/kelvin): ");
+                        break;
+
+                    case "2":
+                        RunGenericStaticConversion(
+                            ReadValidTemperatureUnit,
+                            ToTemperatureConversionDisplayUnit,
+                            ConvertTemperature,
+                            "(c/celsius, f/fahrenheit, k/kelvin): ");
+                        break;
+
+                    case "3":
+                        TryRunUnsupportedTemperatureArithmetic(() =>
+                            RunGenericAddition(
+                                temperatureMeasurableService,
+                                ReadValidTemperatureUnit,
+                                "Enter unit (c/celsius, f/fahrenheit, k/kelvin): "));
+                        break;
+
+                    case "4":
+                        TryRunUnsupportedTemperatureArithmetic(() =>
+                            RunGenericSubtraction(
+                                temperatureMeasurableService,
+                                ReadValidTemperatureUnit,
+                                "Enter unit (c/celsius, f/fahrenheit, k/kelvin): "));
+                        break;
+
+                    case "5":
+                        TryRunUnsupportedTemperatureArithmetic(() =>
+                            RunGenericDivision(
+                                temperatureMeasurableService,
+                                ReadValidTemperatureUnit,
+                                "Enter unit (c/celsius, f/fahrenheit, k/kelvin): "));
+                        break;
+
+                    case "0":
+                        return;
+
+                    default:
+                        Console.WriteLine("Invalid option. Please choose 1-5 or 0.");
                         break;
                 }
 
@@ -618,6 +691,70 @@ namespace QuantityMeasurementApp.Menu
 
             Console.WriteLine($"You entered: {dividend} divided by {divisor}");
             Console.WriteLine($"Result (ratio): {result.ToString("0.######", CultureInfo.InvariantCulture)}");
+        }
+
+        private static TemperatureUnit ReadValidTemperatureUnit(string promptMessage)
+        {
+            while (true)
+            {
+                Console.Write(promptMessage);
+                string? rawUnitText = Console.ReadLine();
+
+                if (TemperatureUnitParser.TryParse(rawUnitText, out TemperatureUnit parsedUnit))
+                {
+                    return parsedUnit;
+                }
+
+                Console.WriteLine("Invalid unit. Supported units: c/celsius, f/fahrenheit, k/kelvin.");
+            }
+        }
+
+        private static string ToTemperatureConversionDisplayUnit(TemperatureUnit temperatureUnit)
+        {
+            return temperatureUnit.ToString().ToUpperInvariant();
+        }
+
+        private static double ConvertTemperature(double measurementValue, TemperatureUnit? sourceUnit, TemperatureUnit? targetUnit)
+        {
+            if (double.IsNaN(measurementValue) || double.IsInfinity(measurementValue))
+            {
+                throw new ArgumentException("Temperature value must be a finite number.", nameof(measurementValue));
+            }
+
+            if (sourceUnit is null)
+            {
+                throw new ArgumentNullException(nameof(sourceUnit), "Source unit cannot be null.");
+            }
+
+            if (targetUnit is null)
+            {
+                throw new ArgumentNullException(nameof(targetUnit), "Target unit cannot be null.");
+            }
+
+            if (!Enum.IsDefined(typeof(TemperatureUnit), sourceUnit.Value))
+            {
+                throw new ArgumentException("Unsupported source temperature unit.", nameof(sourceUnit));
+            }
+
+            if (!Enum.IsDefined(typeof(TemperatureUnit), targetUnit.Value))
+            {
+                throw new ArgumentException("Unsupported target temperature unit.", nameof(targetUnit));
+            }
+
+            double baseCelsius = temperatureMeasurableService.ConvertToBaseUnit(sourceUnit.Value, measurementValue);
+            return temperatureMeasurableService.ConvertFromBaseUnit(targetUnit.Value, baseCelsius);
+        }
+
+        private static void TryRunUnsupportedTemperatureArithmetic(Action temperatureArithmeticAction)
+        {
+            try
+            {
+                temperatureArithmeticAction();
+            }
+            catch (NotSupportedException notSupportedException)
+            {
+                Console.WriteLine(notSupportedException.Message);
+            }
         }
     }
 }
