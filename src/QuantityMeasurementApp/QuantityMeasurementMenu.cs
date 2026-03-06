@@ -65,6 +65,9 @@ namespace QuantityMeasurementApp.Menu
                 Console.WriteLine("4) Length Addition with Target Unit (UC7)");
                 Console.WriteLine("5) Feet Equality (UC1)");
                 Console.WriteLine("6) Inches Equality (UC2)");
+                Console.WriteLine("7) Length Subtraction (UC12)");
+                Console.WriteLine("8) Length Subtraction with Target Unit (UC12)");
+                Console.WriteLine("9) Length Division (UC12)");
                 Console.WriteLine("0) Back");
                 Console.Write("Choose an option: ");
 
@@ -103,10 +106,30 @@ namespace QuantityMeasurementApp.Menu
                     case "6":
                         CheckInchesEquality();
                         break;
+                    case "7":
+                        RunGenericSubtraction(
+                            lengthMeasurableService,
+                            ReadValidLengthUnit,
+                            "Enter unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+                        break;
+
+                    case "8":
+                        RunGenericSubtractionWithTargetUnit(
+                            lengthMeasurableService,
+                            ReadValidLengthUnit,
+                            "Enter unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+                        break;
+
+                    case "9":
+                        RunGenericDivision(
+                            lengthMeasurableService,
+                            ReadValidLengthUnit,
+                            "Enter unit (feet/ft/inch/in/inches/yard/yards/yd/cm/centimeter/centimeters): ");
+                        break;
                     case "0":
                         return;
                     default:
-                        Console.WriteLine("Invalid option. Please choose 1-6 or 0.");
+                        Console.WriteLine("Invalid option. Please choose 1-9 or 0.");
                         break;
                 }
 
@@ -123,6 +146,9 @@ namespace QuantityMeasurementApp.Menu
                 Console.WriteLine("2) Weight Unit Conversion");
                 Console.WriteLine("3) Weight Addition (result in first unit)");
                 Console.WriteLine("4) Weight Addition with Target Unit");
+                Console.WriteLine("5) Weight Subtraction (UC12)");
+                Console.WriteLine("6) Weight Subtraction with Target Unit (UC12)");
+                Console.WriteLine("7) Weight Division (UC12)");
                 Console.WriteLine("0) Back");
                 Console.Write("Choose an option: ");
 
@@ -155,10 +181,30 @@ namespace QuantityMeasurementApp.Menu
                             ReadValidWeightUnit,
                             "Enter unit (kg/kilogram/kilograms, g/gram/grams, lb/pound/pounds): ");
                         break;
+                    case "5":
+                        RunGenericSubtraction(
+                            weightMeasurableService,
+                            ReadValidWeightUnit,
+                            "Enter unit (kg/kilogram/kilograms, g/gram/grams, lb/pound/pounds): ");
+                        break;
+
+                    case "6":
+                        RunGenericSubtractionWithTargetUnit(
+                            weightMeasurableService,
+                            ReadValidWeightUnit,
+                            "Enter unit (kg/kilogram/kilograms, g/gram/grams, lb/pound/pounds): ");
+                        break;
+
+                    case "7":
+                        RunGenericDivision(
+                            weightMeasurableService,
+                            ReadValidWeightUnit,
+                            "Enter unit (kg/kilogram/kilograms, g/gram/grams, lb/pound/pounds): ");
+                        break;
                     case "0":
                         return;
                     default:
-                        Console.WriteLine("Invalid option. Please choose 1-4 or 0.");
+                        Console.WriteLine("Invalid option. Please choose 1-7 or 0.");
                         break;
                 }
 
@@ -175,6 +221,9 @@ namespace QuantityMeasurementApp.Menu
                 Console.WriteLine("2) Volume Unit Conversion");
                 Console.WriteLine("3) Volume Addition (result in first unit)");
                 Console.WriteLine("4) Volume Addition with Target Unit");
+                Console.WriteLine("5) Volume Subtraction (UC12)");
+                Console.WriteLine("6) Volume Subtraction with Target Unit (UC12)");
+                Console.WriteLine("7) Volume Division (UC12)");
                 Console.WriteLine("0) Back");
                 Console.Write("Choose an option: ");
 
@@ -207,10 +256,30 @@ namespace QuantityMeasurementApp.Menu
                             ReadValidVolumeUnit,
                             "Enter unit (l/litre/litres, ml/millilitre/millilitres, gal/gallon/gallons): ");
                         break;
+                    case "5":
+                        RunGenericSubtraction(
+                            volumeMeasurableService,
+                            ReadValidVolumeUnit,
+                            "Enter unit (l/litre/litres, ml/millilitre/millilitres, gal/gallon/gallons): ");
+                        break;
+
+                    case "6":
+                        RunGenericSubtractionWithTargetUnit(
+                            volumeMeasurableService,
+                            ReadValidVolumeUnit,
+                            "Enter unit (l/litre/litres, ml/millilitre/millilitres, gal/gallon/gallons): ");
+                        break;
+
+                    case "7":
+                        RunGenericDivision(
+                            volumeMeasurableService,
+                            ReadValidVolumeUnit,
+                            "Enter unit (l/litre/litres, ml/millilitre/millilitres, gal/gallon/gallons): ");
+                        break;
                     case "0":
                         return;
                     default:
-                        Console.WriteLine("Invalid option. Please choose 1-4 or 0.");
+                        Console.WriteLine("Invalid option. Please choose 1-7 or 0.");
                         break;
                 }
 
@@ -483,6 +552,72 @@ namespace QuantityMeasurementApp.Menu
 
             double baseLitresValue = volumeMeasurableService.ConvertToBaseUnit(sourceUnit.Value, measurementValue);
             return volumeMeasurableService.ConvertFromBaseUnit(targetUnit.Value, baseLitresValue);
+        }
+
+        private static void RunGenericSubtraction<TUnit>(
+            IMeasurable<TUnit> measurable,
+            Func<string, TUnit> unitReader,
+            string unitPromptMessage)
+            where TUnit : struct, Enum
+        {
+            double firstValue = ReadValidFiniteDouble("Enter first value: ");
+            TUnit firstUnit = unitReader(unitPromptMessage);
+
+            double secondValue = ReadValidFiniteDouble("Enter second value: ");
+            TUnit secondUnit = unitReader(unitPromptMessage);
+
+            Quantity<TUnit> firstQuantity = new Quantity<TUnit>(firstValue, firstUnit, measurable);
+            Quantity<TUnit> secondQuantity = new Quantity<TUnit>(secondValue, secondUnit, measurable);
+
+            Quantity<TUnit> resultQuantity = firstQuantity.Subtract(secondQuantity);
+
+            Console.WriteLine($"You entered: {firstQuantity} minus {secondQuantity}");
+            Console.WriteLine($"Result: {resultQuantity}");
+        }
+
+        private static void RunGenericSubtractionWithTargetUnit<TUnit>(
+            IMeasurable<TUnit> measurable,
+            Func<string, TUnit> unitReader,
+            string unitPromptMessage)
+            where TUnit : struct, Enum
+        {
+            double firstValue = ReadValidFiniteDouble("Enter first value: ");
+            TUnit firstUnit = unitReader(unitPromptMessage);
+
+            double secondValue = ReadValidFiniteDouble("Enter second value: ");
+            TUnit secondUnit = unitReader(unitPromptMessage);
+
+            TUnit targetUnit = unitReader("Enter target unit " + unitPromptMessage);
+
+            Quantity<TUnit> firstQuantity = new Quantity<TUnit>(firstValue, firstUnit, measurable);
+            Quantity<TUnit> secondQuantity = new Quantity<TUnit>(secondValue, secondUnit, measurable);
+
+            Quantity<TUnit> resultQuantity = firstQuantity.Subtract(secondQuantity, targetUnit);
+
+            Console.WriteLine($"You entered: {firstQuantity} minus {secondQuantity}");
+            Console.WriteLine($"Target unit: {measurable.GetUnitName(targetUnit)}");
+            Console.WriteLine($"Result: {resultQuantity}");
+        }
+
+        private static void RunGenericDivision<TUnit>(
+            IMeasurable<TUnit> measurable,
+            Func<string, TUnit> unitReader,
+            string unitPromptMessage)
+            where TUnit : struct, Enum
+        {
+            double dividendValue = ReadValidFiniteDouble("Enter dividend value: ");
+            TUnit dividendUnit = unitReader(unitPromptMessage);
+
+            double divisorValue = ReadValidFiniteDouble("Enter divisor value: ");
+            TUnit divisorUnit = unitReader(unitPromptMessage);
+
+            Quantity<TUnit> dividend = new Quantity<TUnit>(dividendValue, dividendUnit, measurable);
+            Quantity<TUnit> divisor = new Quantity<TUnit>(divisorValue, divisorUnit, measurable);
+
+            double result = dividend.Divide(divisor);
+
+            Console.WriteLine($"You entered: {dividend} divided by {divisor}");
+            Console.WriteLine($"Result (ratio): {result.ToString("0.######", CultureInfo.InvariantCulture)}");
         }
     }
 }
