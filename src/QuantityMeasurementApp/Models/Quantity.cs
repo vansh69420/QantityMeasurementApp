@@ -138,34 +138,13 @@ namespace QuantityMeasurementApp.Models
 
         public Quantity<TUnit> Add(Quantity<TUnit> otherQuantity, TUnit? targetUnit)
         {
-            if (ReferenceEquals(otherQuantity, null))
-            {
-                throw new ArgumentNullException(nameof(otherQuantity), "Other quantity cannot be null.");
-            }
+            ValidateArithmeticOperands(otherQuantity, targetUnit, isTargetUnitRequired: true, ArithmeticOperation.Add);
 
-            if (measurable.GetType() != otherQuantity.measurable.GetType())
-            {
-                throw new ArgumentException("Cannot add quantities with different measurable implementations.", nameof(otherQuantity));
-            }
+            double sumBaseValue = PerformBaseArithmetic(otherQuantity, ArithmeticOperation.Add);
 
-            if (targetUnit is null)
-            {
-                throw new ArgumentNullException(nameof(targetUnit), "Target unit cannot be null.");
-            }
+            double sumTargetValue = measurable.ConvertFromBaseUnit(targetUnit!.Value, sumBaseValue);
 
-            if (!measurable.IsUnitSupported(targetUnit.Value))
-            {
-                throw new ArgumentException("Unsupported target unit.", nameof(targetUnit));
-            }
-
-            double firstBaseValue = measurable.ConvertToBaseUnit(unit, measurementValue);
-            double secondBaseValue = otherQuantity.measurable.ConvertToBaseUnit(otherQuantity.unit, otherQuantity.measurementValue);
-
-            double sumBaseValue = firstBaseValue + secondBaseValue;
-
-            double sumTargetValue = measurable.ConvertFromBaseUnit(targetUnit.Value, sumBaseValue);
-
-            // Preserve existing UC behavior: do not force rounding during Add().
+            // Preserve UC12 behavior: do not force rounding during Add().
             return new Quantity<TUnit>(sumTargetValue, targetUnit.Value, measurable);
         }
 
@@ -181,32 +160,11 @@ namespace QuantityMeasurementApp.Models
 
         public Quantity<TUnit> Subtract(Quantity<TUnit> otherQuantity, TUnit? targetUnit)
         {
-            if (ReferenceEquals(otherQuantity, null))
-            {
-                throw new ArgumentNullException(nameof(otherQuantity), "Other quantity cannot be null.");
-            }
+            ValidateArithmeticOperands(otherQuantity, targetUnit, isTargetUnitRequired: true, ArithmeticOperation.Subtract);
 
-            if (measurable.GetType() != otherQuantity.measurable.GetType())
-            {
-                throw new ArgumentException("Cannot subtract quantities with different measurable implementations.", nameof(otherQuantity));
-            }
+            double differenceBaseValue = PerformBaseArithmetic(otherQuantity, ArithmeticOperation.Subtract);
 
-            if (targetUnit is null)
-            {
-                throw new ArgumentNullException(nameof(targetUnit), "Target unit cannot be null.");
-            }
-
-            if (!measurable.IsUnitSupported(targetUnit.Value))
-            {
-                throw new ArgumentException("Unsupported target unit.", nameof(targetUnit));
-            }
-
-            double thisBaseValue = measurable.ConvertToBaseUnit(unit, measurementValue);
-            double otherBaseValue = otherQuantity.measurable.ConvertToBaseUnit(otherQuantity.unit, otherQuantity.measurementValue);
-
-            double differenceBaseValue = thisBaseValue - otherBaseValue;
-
-            double differenceTargetValue = measurable.ConvertFromBaseUnit(targetUnit.Value, differenceBaseValue);
+            double differenceTargetValue = measurable.ConvertFromBaseUnit(targetUnit!.Value, differenceBaseValue);
 
             // UC12 S1: always round subtraction results to 2 decimals.
             double roundedDifference = Math.Round(differenceTargetValue, 2, MidpointRounding.AwayFromZero);
@@ -216,6 +174,24 @@ namespace QuantityMeasurementApp.Models
 
         public double Divide(Quantity<TUnit> otherQuantity)
         {
+            ValidateArithmeticOperands(otherQuantity, targetUnit: null, isTargetUnitRequired: false, ArithmeticOperation.Divide);
+
+            return PerformBaseArithmetic(otherQuantity, ArithmeticOperation.Divide);
+        }
+
+        private enum ArithmeticOperation
+        {
+            Add = 1,
+            Subtract = 2,
+            Divide = 3
+        }
+
+        private void ValidateArithmeticOperands(
+            Quantity<TUnit> otherQuantity,
+            TUnit? targetUnit,
+            bool isTargetUnitRequired,
+            ArithmeticOperation operation)
+        {
             if (ReferenceEquals(otherQuantity, null))
             {
                 throw new ArgumentNullException(nameof(otherQuantity), "Other quantity cannot be null.");
@@ -223,18 +199,57 @@ namespace QuantityMeasurementApp.Models
 
             if (measurable.GetType() != otherQuantity.measurable.GetType())
             {
-                throw new ArgumentException("Cannot divide quantities with different measurable implementations.", nameof(otherQuantity));
+                string message = operation switch
+                {
+                    ArithmeticOperation.Add => "Cannot add quantities with different measurable implementations.",
+                    ArithmeticOperation.Subtract => "Cannot subtract quantities with different measurable implementations.",
+                    ArithmeticOperation.Divide => "Cannot divide quantities with different measurable implementations.",
+                    _ => "Incompatible measurable implementations."
+                };
+
+                throw new ArgumentException(message, nameof(otherQuantity));
             }
 
+            // Finiteness validation (UC13 requirement) – constructor already enforces this,
+            // but we keep it centralized and consistent.
+            if (double.IsNaN(measurementValue) || double.IsInfinity(measurementValue))
+            {
+                throw new ArgumentException("Quantity value must be a finite number.", nameof(measurementValue));
+            }
+
+            if (double.IsNaN(otherQuantity.measurementValue) || double.IsInfinity(otherQuantity.measurementValue))
+            {
+                throw new ArgumentException("Quantity value must be a finite number.", nameof(otherQuantity.measurementValue));
+            }
+
+            if (isTargetUnitRequired)
+            {
+                if (targetUnit is null)
+                {
+                    throw new ArgumentNullException(nameof(targetUnit), "Target unit cannot be null.");
+                }
+
+                if (!measurable.IsUnitSupported(targetUnit.Value))
+                {
+                    throw new ArgumentException("Unsupported target unit.", nameof(targetUnit));
+                }
+            }
+        }
+
+        private double PerformBaseArithmetic(Quantity<TUnit> otherQuantity, ArithmeticOperation operation)
+        {
             double thisBaseValue = measurable.ConvertToBaseUnit(unit, measurementValue);
             double otherBaseValue = otherQuantity.measurable.ConvertToBaseUnit(otherQuantity.unit, otherQuantity.measurementValue);
 
-            if (otherBaseValue == 0.0)
+            return operation switch
             {
-                throw new ArithmeticException("Division by zero is not allowed.");
-            }
-
-            return thisBaseValue / otherBaseValue;
+                ArithmeticOperation.Add => thisBaseValue + otherBaseValue,
+                ArithmeticOperation.Subtract => thisBaseValue - otherBaseValue,
+                ArithmeticOperation.Divide => otherBaseValue == 0.0
+                    ? throw new ArithmeticException("Division by zero is not allowed.")
+                    : thisBaseValue / otherBaseValue,
+                _ => throw new ArgumentException("Unsupported arithmetic operation.", nameof(operation))
+            };
         }
     }
 }
