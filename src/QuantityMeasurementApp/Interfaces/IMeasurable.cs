@@ -30,5 +30,12 @@ namespace QuantityMeasurementApp.Interfaces
         /// Per your UC8 rule: length rounds here, weight does not (P1).
         /// </summary>
         double RoundForConvertTo(double convertedValue, TUnit targetUnit);
+
+        bool SupportsArithmetic() => true;
+
+        void ValidateOperationSupport(string operationName)
+        {
+            // Default: all operations supported. Categories like Temperature can override.
+        }
     }
 }
