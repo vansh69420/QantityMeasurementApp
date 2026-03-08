@@ -205,10 +205,22 @@ namespace ServiceLayer.Services
         {
             return first.MeasurementType switch
             {
-                MeasurementType.Length => BuildQuantity(first, lengthMeasurableService).Equals(BuildQuantity(second, lengthMeasurableService)),
-                MeasurementType.Weight => BuildQuantity(first, weightMeasurableService).Equals(BuildQuantity(second, weightMeasurableService)),
-                MeasurementType.Volume => BuildQuantity(first, volumeMeasurableService).Equals(BuildQuantity(second, volumeMeasurableService)),
-                MeasurementType.Temperature => BuildQuantity(first, temperatureMeasurableService).Equals(BuildQuantity(second, temperatureMeasurableService)),
+                MeasurementType.Length =>
+                    BuildQuantity(first, lengthMeasurableService, LengthUnitParser.Parse)
+                        .Equals(BuildQuantity(second, lengthMeasurableService, LengthUnitParser.Parse)),
+
+                MeasurementType.Weight =>
+                    BuildQuantity(first, weightMeasurableService, WeightUnitParser.Parse)
+                        .Equals(BuildQuantity(second, weightMeasurableService, WeightUnitParser.Parse)),
+
+                MeasurementType.Volume =>
+                    BuildQuantity(first, volumeMeasurableService, VolumeUnitParser.Parse)
+                        .Equals(BuildQuantity(second, volumeMeasurableService, VolumeUnitParser.Parse)),
+
+                MeasurementType.Temperature =>
+                    BuildQuantity(first, temperatureMeasurableService, TemperatureUnitParser.Parse)
+                        .Equals(BuildQuantity(second, temperatureMeasurableService, TemperatureUnitParser.Parse)),
+
                 _ => throw new ArgumentException("Unsupported measurement type.")
             };
         }
@@ -274,20 +286,45 @@ namespace ServiceLayer.Services
         {
             return first.MeasurementType switch
             {
-                MeasurementType.Length => BuildQuantity(first, lengthMeasurableService).Divide(BuildQuantity(second, lengthMeasurableService)),
-                MeasurementType.Weight => BuildQuantity(first, weightMeasurableService).Divide(BuildQuantity(second, weightMeasurableService)),
-                MeasurementType.Volume => BuildQuantity(first, volumeMeasurableService).Divide(BuildQuantity(second, volumeMeasurableService)),
-                MeasurementType.Temperature => BuildQuantity(first, temperatureMeasurableService).Divide(BuildQuantity(second, temperatureMeasurableService)),
+                MeasurementType.Length =>
+                    BuildQuantity(first, lengthMeasurableService, LengthUnitParser.Parse)
+                        .Divide(BuildQuantity(second, lengthMeasurableService, LengthUnitParser.Parse)),
+
+                MeasurementType.Weight =>
+                    BuildQuantity(first, weightMeasurableService, WeightUnitParser.Parse)
+                        .Divide(BuildQuantity(second, weightMeasurableService, WeightUnitParser.Parse)),
+
+                MeasurementType.Volume =>
+                    BuildQuantity(first, volumeMeasurableService, VolumeUnitParser.Parse)
+                        .Divide(BuildQuantity(second, volumeMeasurableService, VolumeUnitParser.Parse)),
+
+                MeasurementType.Temperature =>
+                    BuildQuantity(first, temperatureMeasurableService, TemperatureUnitParser.Parse)
+                        .Divide(BuildQuantity(second, temperatureMeasurableService, TemperatureUnitParser.Parse)),
+
                 _ => throw new ArgumentException("Unsupported measurement type.")
             };
         }
 
         // ---------------- Generic helpers ----------------
 
-        private static Quantity<TUnit> BuildQuantity<TUnit>(ModelLayer.Models.QuantityModel model, IMeasurable<TUnit> measurable)
+        private static Quantity<TUnit> BuildQuantity<TUnit>(
+            ModelLayer.Models.QuantityModel model,
+            IMeasurable<TUnit> measurable,
+            Func<string?, TUnit> parseUnit)
             where TUnit : struct, Enum
         {
-            TUnit parsedUnit = ParseUnit<TUnit>(model.UnitText, model.MeasurementType);
+            if (model is null)
+            {
+                throw new ArgumentNullException(nameof(model));
+            }
+
+            if (string.IsNullOrWhiteSpace(model.UnitText))
+            {
+                throw new ArgumentException("UnitText is required.", nameof(model));
+            }
+
+            TUnit parsedUnit = parseUnit(model.UnitText);
             return new Quantity<TUnit>(model.Value, parsedUnit, measurable);
         }
 
@@ -345,14 +382,6 @@ namespace ServiceLayer.Services
             Quantity<TUnit> result = firstQuantity.Subtract(secondQuantity, targetUnit);
 
             return (result.Value, targetUnitText);
-        }
-
-        private static TUnit ParseUnit<TUnit>(string unitText, MeasurementType measurementType)
-            where TUnit : struct, Enum
-        {
-            // This is not used for actual parsing in current code paths.
-            // Kept for completeness if you later generalize unit parsing.
-            throw new NotSupportedException($"Parsing not implemented for {measurementType} with generic unit type {typeof(TUnit).Name}.");
         }
 
         // ---------------- DTO mapping + validation ----------------
