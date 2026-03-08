@@ -78,5 +78,26 @@ namespace ModelLayer.Entities
         public bool HasError { get; }
 
         public string? ErrorMessage { get; }
+
+
+        public override string ToString()
+        {
+            if (HasError)
+            {
+                return $"[{TimestampUtc:o}] {MeasurementType}.{OperationType} ERROR: {ErrorMessage}";
+            }
+
+            if (OperationType == Enums.OperationType.CompareEquality)
+            {
+                return $"[{TimestampUtc:o}] {MeasurementType}.{OperationType} => {EqualityResult}";
+            }
+
+            if (OperationType == Enums.OperationType.Divide)
+            {
+                return $"[{TimestampUtc:o}] {MeasurementType}.{OperationType} => {ScalarResult}";
+            }
+
+            return $"[{TimestampUtc:o}] {MeasurementType}.{OperationType} => {ResultValue} {ResultUnitText}";
+        }
     }
 }

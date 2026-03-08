@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\ModelLayer\ModelLayer.csproj" />
+    <ProjectReference Include="..\..\ControllerLayer\ControllerLayer.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
