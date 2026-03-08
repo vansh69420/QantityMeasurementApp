@@ -1,5 +1,7 @@
-﻿using QuantityMeasurementApp.Menu;
-using QuantityMeasurementApp.Services;
+﻿using ControllerLayer.Controllers;
+using RepositoryLayer.Repositories;
+using ServiceLayer.Services;
+using QuantityMeasurementApp.Menu;
 
 namespace QuantityMeasurementApp
 {
@@ -7,9 +9,11 @@ namespace QuantityMeasurementApp
     {
         private static void Main()
         {
-            QuantityMeasurementMenu quantityMeasurementMenu =
-                new QuantityMeasurementMenu(new QuantityMeasurementService());
+            QuantityMeasurementCacheRepository repository = QuantityMeasurementCacheRepository.Instance;
+            QuantityMeasurementServiceImpl service = new QuantityMeasurementServiceImpl(repository);
+            QuantityMeasurementController controller = new QuantityMeasurementController(service);
 
+            QuantityMeasurementMenu quantityMeasurementMenu = new QuantityMeasurementMenu(controller);
             quantityMeasurementMenu.Run();
         }
     }

@@ -144,6 +144,11 @@ namespace ServiceLayer.Services
 
             try
             {
+                if (quantityDto is null)
+                {
+                    throw new ArgumentNullException(nameof(quantityDto), "QuantityDto cannot be null.");
+                }
+
                 quantityModel = MapToQuantityModel(quantityDto);
 
                 QuantityDto resultDto = operation(quantityModel, targetUnitText);
@@ -154,7 +159,11 @@ namespace ServiceLayer.Services
             }
             catch (Exception exception)
             {
-                QuantityDto errorDto = BuildErrorResult(operationType, quantityModel?.MeasurementType ?? quantityDto.MeasurementType, exception.Message);
+                MeasurementType measurementType = quantityModel?.MeasurementType
+                    ?? quantityDto?.MeasurementType
+                    ?? MeasurementType.Length;
+
+                QuantityDto errorDto = BuildErrorResult(operationType, measurementType, exception.Message);
 
                 SaveErrorEntity(operationType, quantityDto, secondQuantityDto: null, targetUnitText, errorDto);
 
@@ -495,20 +504,30 @@ namespace ServiceLayer.Services
 
         private void SaveErrorEntity(
             OperationType operationType,
-            QuantityDto firstQuantityDto,
+            QuantityDto? firstQuantityDto,
             QuantityDto? secondQuantityDto,
             string? targetUnitText,
             QuantityDto errorDto)
         {
+            MeasurementType measurementType = firstQuantityDto?.MeasurementType
+                ?? secondQuantityDto?.MeasurementType
+                ?? errorDto.MeasurementType;
+
+            double firstValue = firstQuantityDto?.FirstValue ?? 0.0;
+            string firstUnitText = firstQuantityDto?.FirstUnitText ?? string.Empty;
+
+            double? secondValue = secondQuantityDto?.FirstValue;
+            string? secondUnitText = secondQuantityDto?.FirstUnitText;
+
             QuantityMeasurementEntity entity = new QuantityMeasurementEntity(
                 errorDto.OperationId,
                 errorDto.TimestampUtc,
-                firstQuantityDto.MeasurementType,
+                measurementType,
                 operationType,
-                firstQuantityDto.FirstValue ?? 0.0,
-                firstQuantityDto.FirstUnitText ?? string.Empty,
-                secondQuantityDto?.FirstValue,
-                secondQuantityDto?.FirstUnitText,
+                firstValue,
+                firstUnitText,
+                secondValue,
+                secondUnitText,
                 targetUnitText,
                 equalityResult: null,
                 scalarResult: null,
