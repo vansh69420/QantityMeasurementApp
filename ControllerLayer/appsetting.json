@@ -1,0 +1,8 @@
+{
+  "QuantityMeasurement": {
+    "RepositoryType": "Cache"
+  },
+  "ConnectionStrings": {
+    "QuantityMeasurementDb": ""
+  }
+}

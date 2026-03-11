@@ -1,6 +1,6 @@
-// File: ControllerLayer/Program.cs
 using System.Globalization;
 using ControllerLayer.Controllers;
+using ControllerLayer.Factories;
 using ControllerLayer.Menus;
 using RepositoryLayer.Repositories;
 using ServiceLayer.Interfaces;
@@ -15,15 +15,26 @@ namespace ControllerLayer
             CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
             CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
-            IQuantityMeasurementRepository quantityMeasurementRepository = QuantityMeasurementCacheRepository.Instance;
-            IQuantityMeasurementService quantityMeasurementService = new QuantityMeasurementServiceImpl(quantityMeasurementRepository);
-            QuantityMeasurementController quantityMeasurementController = new QuantityMeasurementController(quantityMeasurementService);
+            IQuantityMeasurementRepository quantityMeasurementRepository = QuantityMeasurementRepositoryFactory.Create();
 
-            QuantityMeasurementConsoleMenu menu = new QuantityMeasurementConsoleMenu(
-                quantityMeasurementController,
-                quantityMeasurementRepository);
+            try
+            {
+                IQuantityMeasurementService quantityMeasurementService =
+                    new QuantityMeasurementServiceImpl(quantityMeasurementRepository);
 
-            menu.Run();
+                QuantityMeasurementController quantityMeasurementController =
+                    new QuantityMeasurementController(quantityMeasurementService);
+
+                QuantityMeasurementConsoleMenu menu = new QuantityMeasurementConsoleMenu(
+                    quantityMeasurementController,
+                    quantityMeasurementRepository);
+
+                menu.Run();
+            }
+            finally
+            {
+                quantityMeasurementRepository.ReleaseResources();
+            }
         }
     }
 }
