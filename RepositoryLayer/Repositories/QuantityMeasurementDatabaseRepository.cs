@@ -119,25 +119,25 @@ ORDER BY TimestampUtc DESC;";
         public IReadOnlyList<QuantityMeasurementEntity> GetByMeasurementType(MeasurementType measurementType)
         {
             const string sql = @"
-SELECT
-    OperationId,
-    TimestampUtc,
-    MeasurementType,
-    OperationType,
-    FirstValue,
-    FirstUnitText,
-    SecondValue,
-    SecondUnitText,
-    TargetUnitText,
-    EqualityResult,
-    ScalarResult,
-    ResultValue,
-    ResultUnitText,
-    HasError,
-    ErrorMessage
-FROM dbo.QuantityMeasurementOperations
-WHERE MeasurementType = @MeasurementType
-ORDER BY TimestampUtc DESC;";
+            SELECT
+                OperationId,
+                TimestampUtc,
+                MeasurementType,
+                OperationType,
+                FirstValue,
+                FirstUnitText,
+                SecondValue,
+                SecondUnitText,
+                TargetUnitText,
+                EqualityResult,
+                ScalarResult,
+                ResultValue,
+                ResultUnitText,
+                HasError,
+                ErrorMessage
+            FROM dbo.QuantityMeasurementOperations
+            WHERE MeasurementType = @MeasurementType
+            ORDER BY TimestampUtc DESC;";
 
             try
             {
