@@ -1,25 +1,29 @@
+// File: ControllerLayer/Program.cs
+using System.Globalization;
 using ControllerLayer.Controllers;
+using ControllerLayer.Menus;
 using RepositoryLayer.Repositories;
 using ServiceLayer.Interfaces;
 using ServiceLayer.Services;
 
-WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+namespace ControllerLayer
+{
+    internal static class Program
+    {
+        private static void Main()
+        {
+            CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+            CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+            IQuantityMeasurementRepository quantityMeasurementRepository = QuantityMeasurementCacheRepository.Instance;
+            IQuantityMeasurementService quantityMeasurementService = new QuantityMeasurementServiceImpl(quantityMeasurementRepository);
+            QuantityMeasurementController quantityMeasurementController = new QuantityMeasurementController(quantityMeasurementService);
 
-// DI wiring: Repository -> Service -> UC15 Facade Controller
-builder.Services.AddSingleton<IQuantityMeasurementRepository>(_ => QuantityMeasurementCacheRepository.Instance);
-builder.Services.AddScoped<IQuantityMeasurementService, QuantityMeasurementServiceImpl>();
-builder.Services.AddScoped<QuantityMeasurementController>();
+            QuantityMeasurementConsoleMenu menu = new QuantityMeasurementConsoleMenu(
+                quantityMeasurementController,
+                quantityMeasurementRepository);
 
-WebApplication app = builder.Build();
-
-// Swagger enabled ALWAYS (as you requested)
-app.UseSwagger();
-app.UseSwaggerUI();
-
-app.MapControllers();
-
-app.Run();
+            menu.Run();
+        }
+    }
+}
