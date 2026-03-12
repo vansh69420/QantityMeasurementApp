@@ -1,8 +1,8 @@
 {
   "QuantityMeasurement": {
-    "RepositoryType": "Database"
+    "RepositoryType": "OrmSql"
   },
   "ConnectionStrings": {
-    "QuantityMeasurementDb": "Server=127.0.0.1,1433;Database=QuantityMeasurementDb;User Id=sa;Password=Vansh@77;Encrypt=False;TrustServerCertificate=True;"
+    "QuantityMeasurementDb": "Server=127.0.0.1,1433;Database=QuantityMeasurementDb;User Id=sa;Password=YOUR_PASSWORD;Encrypt=False;TrustServerCertificate=True;"
   }
 }
