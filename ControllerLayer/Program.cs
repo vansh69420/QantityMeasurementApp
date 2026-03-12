@@ -1,40 +1,39 @@
-using System.Globalization;
+// File: ControllerLayer/Program.cs
 using ControllerLayer.Controllers;
 using ControllerLayer.Factories;
-using ControllerLayer.Menus;
+using ControllerLayer.Middleware;
 using RepositoryLayer.Repositories;
 using ServiceLayer.Interfaces;
 using ServiceLayer.Services;
 
-namespace ControllerLayer
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+builder.Services.AddHealthChecks();
+
+// Repository selection (Switch mode: Cache / LegacySql / OrmSql)
+builder.Services.AddSingleton<IQuantityMeasurementRepository>(serviceProvider =>
 {
-    internal static class Program
-    {
-        private static void Main()
-        {
-            CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
-            CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
+    IConfiguration configuration = serviceProvider.GetRequiredService<IConfiguration>();
+    return QuantityMeasurementRepositoryFactory.Create(configuration);
+});
 
-            IQuantityMeasurementRepository quantityMeasurementRepository = QuantityMeasurementRepositoryFactory.Create();
+builder.Services.AddScoped<IQuantityMeasurementService, QuantityMeasurementServiceImpl>();
+builder.Services.AddScoped<QuantityMeasurementController>();
 
-            try
-            {
-                IQuantityMeasurementService quantityMeasurementService =
-                    new QuantityMeasurementServiceImpl(quantityMeasurementRepository);
+WebApplication app = builder.Build();
 
-                QuantityMeasurementController quantityMeasurementController =
-                    new QuantityMeasurementController(quantityMeasurementService);
+// Global exception handling (consistent JSON error response)
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
-                QuantityMeasurementConsoleMenu menu = new QuantityMeasurementConsoleMenu(
-                    quantityMeasurementController,
-                    quantityMeasurementRepository);
+// Swagger enabled ALWAYS
+app.UseSwagger();
+app.UseSwaggerUI();
 
-                menu.Run();
-            }
-            finally
-            {
-                quantityMeasurementRepository.ReleaseResources();
-            }
-        }
-    }
-}
+app.MapControllers();
+app.MapHealthChecks("/health");
+
+app.Run();
