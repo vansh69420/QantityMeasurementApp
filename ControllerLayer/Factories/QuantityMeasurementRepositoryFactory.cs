@@ -38,9 +38,18 @@ namespace ControllerLayer.Factories
 
             if (string.Equals(repositoryType, "OrmSql", StringComparison.OrdinalIgnoreCase))
             {
-                // Commit 2 will implement EF Core repository.
-                throw new InvalidOperationException(
-                    "RepositoryType is 'OrmSql' but ORM repository is not implemented yet. Apply UC17 Commit 2.");
+                string? baseConnectionString = configuration.GetConnectionString("QuantityMeasurementDb");
+
+                if (string.IsNullOrWhiteSpace(baseConnectionString))
+                {
+                    throw new InvalidOperationException(
+                        "RepositoryType is 'OrmSql' but ConnectionStrings:QuantityMeasurementDb is missing.");
+                }
+
+                // Auto-create/update ORM DB on startup (you chose auto-migrate)
+                RepositoryLayer.Orm.QuantityMeasurementOrmDatabaseInitializer.EnsureMigrated(baseConnectionString);
+
+                return new QuantityMeasurementEfCoreRepository(baseConnectionString);
             }
 
             throw new InvalidOperationException(
