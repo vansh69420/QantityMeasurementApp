@@ -73,24 +73,24 @@ namespace RepositoryLayer.Repositories
         public IReadOnlyList<QuantityMeasurementEntity> GetAll()
         {
             const string sql = @"
-SELECT
-    OperationId,
-    TimestampUtc,
-    MeasurementType,
-    OperationType,
-    FirstValue,
-    FirstUnitText,
-    SecondValue,
-    SecondUnitText,
-    TargetUnitText,
-    EqualityResult,
-    ScalarResult,
-    ResultValue,
-    ResultUnitText,
-    HasError,
-    ErrorMessage
-FROM dbo.QuantityMeasurementOperations
-ORDER BY TimestampUtc DESC;";
+                SELECT
+                    OperationId,
+                    TimestampUtc,
+                    MeasurementType,
+                    OperationType,
+                    FirstValue,
+                    FirstUnitText,
+                    SecondValue,
+                    SecondUnitText,
+                    TargetUnitText,
+                    EqualityResult,
+                    ScalarResult,
+                    ResultValue,
+                    ResultUnitText,
+                    HasError,
+                    ErrorMessage
+                FROM dbo.QuantityMeasurementOperations
+                ORDER BY TimestampUtc DESC;";
 
             try
             {
