@@ -2,6 +2,9 @@
   "QuantityMeasurement": {
     "RepositoryType": "OrmSql"
   },
+  "Redis": {
+    "ConnectionString": "localhost:6379"
+  },
   "ConnectionStrings": {
     "QuantityMeasurementDb": "Server=127.0.0.1,1433;Database=QuantityMeasurementDb;User Id=sa;Password=YOUR_PASSWORD;Encrypt=False;TrustServerCertificate=True;"
   }
