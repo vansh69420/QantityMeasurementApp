@@ -39,17 +39,30 @@ namespace ControllerLayer.Factories
             if (string.Equals(repositoryType, "OrmSql", StringComparison.OrdinalIgnoreCase))
             {
                 string? baseConnectionString = configuration.GetConnectionString("QuantityMeasurementDb");
-
                 if (string.IsNullOrWhiteSpace(baseConnectionString))
                 {
                     throw new InvalidOperationException(
                         "RepositoryType is 'OrmSql' but ConnectionStrings:QuantityMeasurementDb is missing.");
                 }
 
-                // Auto-create/update ORM DB on startup (you chose auto-migrate)
+                string? redisConnectionString = configuration["Redis:ConnectionString"];
+                if (string.IsNullOrWhiteSpace(redisConnectionString))
+                {
+                    throw new InvalidOperationException(
+                        "RepositoryType is 'OrmSql' but Redis:ConnectionString is missing.");
+                }
+
+                // Ensure ORM DB is migrated (your UC17 choice)
                 RepositoryLayer.Orm.QuantityMeasurementOrmDatabaseInitializer.EnsureMigrated(baseConnectionString);
 
-                return new QuantityMeasurementEfCoreRepository(baseConnectionString);
+                // Fail fast (S1): connect+ping Redis during startup
+                var multiplexer = RepositoryLayer.Redis.RedisConnectionProvider.ConnectAndPing(redisConnectionString);
+
+                var outboxStore = new RepositoryLayer.Redis.RedisOutboxStore(multiplexer);
+
+                var innerOrmRepo = new QuantityMeasurementEfCoreRepository(baseConnectionString);
+
+                return new DisconnectedQuantityMeasurementRepository(innerOrmRepo, outboxStore);
             }
 
             throw new InvalidOperationException(

@@ -16,6 +16,11 @@ namespace RepositoryLayer.Orm
         {
             modelBuilder.Entity<QuantityMeasurementOrmEntity>(entity =>
             {
+                entity.ToTable(tableBuilder =>
+                {
+                    tableBuilder.HasTrigger("tr_QuantityMeasurementOperations_Audit");
+                });
+
                 entity.HasIndex(e => e.OperationId)
                     .IsUnique();
 
