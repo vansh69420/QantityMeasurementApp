@@ -168,25 +168,25 @@ namespace RepositoryLayer.Repositories
         public IReadOnlyList<QuantityMeasurementEntity> GetByOperationType(OperationType operationType)
         {
             const string sql = @"
-SELECT
-    OperationId,
-    TimestampUtc,
-    MeasurementType,
-    OperationType,
-    FirstValue,
-    FirstUnitText,
-    SecondValue,
-    SecondUnitText,
-    TargetUnitText,
-    EqualityResult,
-    ScalarResult,
-    ResultValue,
-    ResultUnitText,
-    HasError,
-    ErrorMessage
-FROM dbo.QuantityMeasurementOperations
-WHERE OperationType = @OperationType
-ORDER BY TimestampUtc DESC;";
+                SELECT
+                    OperationId,
+                    TimestampUtc,
+                    MeasurementType,
+                    OperationType,
+                    FirstValue,
+                    FirstUnitText,
+                    SecondValue,
+                    SecondUnitText,
+                    TargetUnitText,
+                    EqualityResult,
+                    ScalarResult,
+                    ResultValue,
+                    ResultUnitText,
+                    HasError,
+                    ErrorMessage
+                FROM dbo.QuantityMeasurementOperations
+                WHERE OperationType = @OperationType
+                ORDER BY TimestampUtc DESC;";
 
             try
             {

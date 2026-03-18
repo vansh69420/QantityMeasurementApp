@@ -14,16 +14,21 @@ namespace RepositoryLayer.Repositories
     {
         private readonly DbContextOptions<QuantityMeasurementOrmDbContext> options;
 
-        public QuantityMeasurementEfCoreRepository(string baseConnectionString)
+        public QuantityMeasurementEfCoreRepository(string baseConnectionString, string ormDatabaseName)
         {
             if (string.IsNullOrWhiteSpace(baseConnectionString))
             {
                 throw new ArgumentNullException(nameof(baseConnectionString));
             }
 
+            if (string.IsNullOrWhiteSpace(ormDatabaseName))
+            {
+                throw new ArgumentNullException(nameof(ormDatabaseName));
+            }
+
             string ormConnectionString = QuantityMeasurementOrmConnectionString.BuildOrmConnectionString(
                 baseConnectionString,
-                ormDatabaseName: "QuantityMeasurementOrmDb");
+                ormDatabaseName);
 
             options = new DbContextOptionsBuilder<QuantityMeasurementOrmDbContext>()
                 .UseSqlServer(ormConnectionString)
