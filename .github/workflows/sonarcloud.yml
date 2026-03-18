@@ -1,0 +1,61 @@
+name: SonarCloud
+
+on:
+  push:
+
+jobs:
+  sonarcloud:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (full history for Sonar)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fail if SONAR_TOKEN is missing
+        shell: bash
+        run: |
+          if [ -z "${{ secrets.SONAR_TOKEN }}" ]; then
+            echo "SONAR_TOKEN secret is missing. Add it in GitHub: Settings -> Secrets and variables -> Actions -> New repository secret"
+            exit 1
+          fi
+
+      - name: Setup .NET (global.json)
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-quality: preview
+
+      - name: Setup Java 17 (required by scanner)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install dotnet-sonarscanner
+        shell: bash
+        run: |
+          dotnet tool install --global dotnet-sonarscanner
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: SonarCloud Begin
+        shell: bash
+        run: |
+          dotnet sonarscanner begin \
+            /k:"${{ vars.SONAR_PROJECT_KEY }}" \
+            /o:"${{ vars.SONAR_ORGANIZATION }}" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+
+      - name: Build
+        shell: bash
+        run: dotnet build QuantityMeasurementApp.sln -c Release
+
+      - name: Test
+        shell: bash
+        run: dotnet test QuantityMeasurementApp.sln -c Release --no-build
+
+      - name: SonarCloud End
+        shell: bash
+        run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"

@@ -8,20 +8,22 @@ namespace RepositoryLayer.Orm
     {
         public QuantityMeasurementOrmDbContext CreateDbContext(string[] args)
         {
-            // For dotnet-ef usage:
-            // Set env var ConnectionStrings__QuantityMeasurementDb to your base connection string (QuantityMeasurementDb)
-            // We will automatically target QuantityMeasurementOrmDb for migrations.
             string? baseConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__QuantityMeasurementDb");
-
             if (string.IsNullOrWhiteSpace(baseConnectionString))
             {
-                throw new InvalidOperationException(
-                    "Missing env var ConnectionStrings__QuantityMeasurementDb for EF migrations.");
+                throw new InvalidOperationException("Missing env var ConnectionStrings__QuantityMeasurementDb for EF migrations.");
             }
+
+            string ormDatabaseName =
+                Environment.GetEnvironmentVariable("QuantityMeasurement__OrmDatabaseName")
+                ?? "QuantityMeasurementOrmDb";
+
+            // Ensure DB exists for migrations target
+            SqlServerDatabaseCreator.EnsureDatabaseExists(baseConnectionString, ormDatabaseName);
 
             string ormConnectionString = QuantityMeasurementOrmConnectionString.BuildOrmConnectionString(
                 baseConnectionString,
-                ormDatabaseName: "QuantityMeasurementOrmDb");
+                ormDatabaseName);
 
             DbContextOptions<QuantityMeasurementOrmDbContext> options = new DbContextOptionsBuilder<QuantityMeasurementOrmDbContext>()
                 .UseSqlServer(ormConnectionString)

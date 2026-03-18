@@ -15,7 +15,10 @@
     <PackageReference Include="NUnit.Analyzers" Version="4.7.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
-  </ItemGroup>
+    <PackageReference Include="DotNet.Testcontainers" Version="1.7.0-beta.2269" />
+    <PackageReference Include="Testcontainers.MsSql" Version="1.7.0-beta.2269" />
+    <PackageReference Include="Testcontainers.Redis" Version="1.7.0-beta.2269" />
+      </ItemGroup>
 
   <ItemGroup>
     <Using Include="NUnit.Framework" />
