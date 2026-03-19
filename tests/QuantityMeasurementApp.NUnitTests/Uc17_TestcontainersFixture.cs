@@ -38,6 +38,10 @@ namespace QuantityMeasurementApp.NUnitTests
             Environment.SetEnvironmentVariable("Redis__ConnectionString", redisContainer.GetConnectionString());
             Environment.SetEnvironmentVariable("ConnectionStrings__QuantityMeasurementDb", sqlContainer.GetConnectionString());
 
+            Environment.SetEnvironmentVariable("Jwt__SigningKey", "THIS_IS_A_TEST_SIGNING_KEY_CHANGE_ME_1234567890");
+            Environment.SetEnvironmentVariable("Jwt__Issuer", "QuantityMeasurementApp");
+            Environment.SetEnvironmentVariable("Jwt__Audience", "QuantityMeasurementApp.Client");
+
             // Ensure ORM test database exists + migrations applied
             QuantityMeasurementOrmDatabaseInitializer.EnsureMigrated(sqlContainer.GetConnectionString(), OrmTestDbName);
 
@@ -60,7 +64,6 @@ namespace QuantityMeasurementApp.NUnitTests
 
         private static async Task ClearOrmDbAsync()
         {
-            // Cleanup B1: clear Operations + AuditLog
             string ormDbConnectionString = QuantityMeasurementOrmConnectionString.BuildOrmConnectionString(
                 sqlContainer.GetConnectionString(),
                 OrmTestDbName);
@@ -68,8 +71,13 @@ namespace QuantityMeasurementApp.NUnitTests
             await using SqlConnection connection = new SqlConnection(ormDbConnectionString);
             await connection.OpenAsync();
 
-            // Order: Audit first is ok; both are independent
-            await using (SqlCommand cmd = new SqlCommand("DELETE FROM dbo.AuditLog;", connection))
+            // Delete child tables first (triggers will write to AuditLog)
+            await using (SqlCommand cmd = new SqlCommand("DELETE FROM dbo.RefreshTokens;", connection))
+            {
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            await using (SqlCommand cmd = new SqlCommand("DELETE FROM dbo.Users;", connection))
             {
                 await cmd.ExecuteNonQueryAsync();
             }
@@ -78,11 +86,18 @@ namespace QuantityMeasurementApp.NUnitTests
             {
                 await cmd.ExecuteNonQueryAsync();
             }
+
+            // Clear audit last so reset state is clean
+            await using (SqlCommand cmd = new SqlCommand("DELETE FROM dbo.AuditLog;", connection))
+            {
+                await cmd.ExecuteNonQueryAsync();
+            }
         }
 
         private static async Task ClearRedisAsync()
         {
-            ConfigurationOptions options = ConfigurationOptions.Parse(redisContainer.GetConnectionString());            options.AllowAdmin = true;
+            ConfigurationOptions options = ConfigurationOptions.Parse(redisContainer.GetConnectionString());
+            options.AllowAdmin = true;
 
             IConnectionMultiplexer multiplexer = await ConnectionMultiplexer.ConnectAsync(options);
 

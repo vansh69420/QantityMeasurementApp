@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -13,6 +14,20 @@ namespace QuantityMeasurementApp.NUnitTests
     [NonParallelizable]
     public sealed class Uc17_Api_AllEndpoints_IntegrationTests
     {
+        private const string TestUsername = "testuser";
+        private const string TestEmail = "testuser@example.com";
+        private const string TestPassword = "P@ssw0rd123!";
+
+        private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
+        private sealed class LoginResponse
+        {
+            public string AccessToken { get; set; } = string.Empty;
+        }
+
         private WebApplicationFactory<Program>? factory;
         private HttpClient? client;
 
@@ -23,6 +38,8 @@ namespace QuantityMeasurementApp.NUnitTests
 
             factory = new WebApplicationFactory<Program>();
             client = factory.CreateClient();
+
+            await AuthenticateAndSetBearerAsync();
         }
 
         [TearDown]
@@ -115,7 +132,6 @@ namespace QuantityMeasurementApp.NUnitTests
         [Test]
         public async Task testHistory_Endpoints_Work()
         {
-            // seed some history
             await testConvert_Endpoint_Works();
             await testAdd_Endpoint_Works();
 
@@ -154,6 +170,34 @@ namespace QuantityMeasurementApp.NUnitTests
 
             HttpResponseMessage badOp = await client.GetAsync("/api/quantity/history/operationType/BadOp");
             Assert.That(badOp.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        }
+
+        private async Task AuthenticateAndSetBearerAsync()
+        {
+            var registerRequest = new
+            {
+                username = TestUsername,
+                email = TestEmail,
+                password = TestPassword
+            };
+
+            HttpResponseMessage registerResponse = await client!.PostAsJsonAsync("/api/auth/register", registerRequest);
+            Assert.That(registerResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+
+            var loginRequest = new
+            {
+                login = TestUsername,
+                password = TestPassword
+            };
+
+            HttpResponseMessage loginResponse = await client.PostAsJsonAsync("/api/auth/login", loginRequest);
+            Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+            LoginResponse? login = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>(JsonOptions);
+            Assert.That(login, Is.Not.Null);
+            Assert.That(login!.AccessToken, Is.Not.Empty);
+
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
         }
 
         private static async Task<int> ReadJsonArrayLength(HttpResponseMessage response)

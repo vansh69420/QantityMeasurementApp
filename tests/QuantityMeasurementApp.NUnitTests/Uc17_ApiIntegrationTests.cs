@@ -3,10 +3,15 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text.Encodings.Web;
 using ControllerLayer;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using ModelLayer.Dtos;
 using ModelLayer.Entities;
 using ModelLayer.Enums;
@@ -26,7 +31,47 @@ namespace QuantityMeasurementApp.NUnitTests
                 {
                     // Override repository to avoid DB / file IO
                     services.AddSingleton<IQuantityMeasurementRepository, InMemoryQuantityMeasurementRepository>();
+
+                    // Test auth: always authenticate so [Authorize] endpoints work without JWT.
+                    services.AddAuthentication(options =>
+                    {
+                        options.DefaultAuthenticateScheme = TestAuthHandler.SchemeName;
+                        options.DefaultChallengeScheme = TestAuthHandler.SchemeName;
+                    })
+                    .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(
+                        TestAuthHandler.SchemeName,
+                        _ => { });
                 });
+            }
+        }
+
+        private sealed class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
+        {
+            public const string SchemeName = "Test";
+
+            public TestAuthHandler(
+                IOptionsMonitor<AuthenticationSchemeOptions> options,
+                ILoggerFactory logger,
+                UrlEncoder encoder)
+                : base(options, logger, encoder)
+            {
+            }
+
+            protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+            {
+                Claim[] claims =
+                {
+                    new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),
+                    new Claim(ClaimTypes.Name, "testuser"),
+                    new Claim(ClaimTypes.Email, "testuser@example.com"),
+                    new Claim(ClaimTypes.Role, "User")
+                };
+
+                ClaimsIdentity identity = new ClaimsIdentity(claims, SchemeName);
+                ClaimsPrincipal principal = new ClaimsPrincipal(identity);
+                AuthenticationTicket ticket = new AuthenticationTicket(principal, SchemeName);
+
+                return Task.FromResult(AuthenticateResult.Success(ticket));
             }
         }
 

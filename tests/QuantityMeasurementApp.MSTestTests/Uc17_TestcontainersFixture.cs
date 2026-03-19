@@ -35,6 +35,9 @@ namespace QuantityMeasurementApp.MSTestTests
 
             Environment.SetEnvironmentVariable("Redis__ConnectionString", RedisContainer.GetConnectionString());
             Environment.SetEnvironmentVariable("ConnectionStrings__QuantityMeasurementDb", SqlContainer.GetConnectionString());
+            Environment.SetEnvironmentVariable("Jwt__SigningKey", "THIS_IS_A_TEST_SIGNING_KEY_CHANGE_ME_1234567890");
+            Environment.SetEnvironmentVariable("Jwt__Issuer", "QuantityMeasurementApp");
+            Environment.SetEnvironmentVariable("Jwt__Audience", "QuantityMeasurementApp.Client");
 
             QuantityMeasurementOrmDatabaseInitializer.EnsureMigrated(SqlContainer.GetConnectionString(), OrmTestDbName);
 
@@ -64,12 +67,24 @@ namespace QuantityMeasurementApp.MSTestTests
             await using SqlConnection connection = new SqlConnection(ormDbConnectionString);
             await connection.OpenAsync();
 
-            await using (SqlCommand cmd = new SqlCommand("DELETE FROM dbo.AuditLog;", connection))
+            // Delete child tables first (triggers will write to AuditLog)
+            await using (SqlCommand cmd = new SqlCommand("DELETE FROM dbo.RefreshTokens;", connection))
+            {
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            await using (SqlCommand cmd = new SqlCommand("DELETE FROM dbo.Users;", connection))
             {
                 await cmd.ExecuteNonQueryAsync();
             }
 
             await using (SqlCommand cmd = new SqlCommand("DELETE FROM dbo.QuantityMeasurementOperations;", connection))
+            {
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            // Clear audit last so reset state is clean
+            await using (SqlCommand cmd = new SqlCommand("DELETE FROM dbo.AuditLog;", connection))
             {
                 await cmd.ExecuteNonQueryAsync();
             }

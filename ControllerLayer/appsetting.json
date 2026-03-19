@@ -8,5 +8,9 @@
   },
   "ConnectionStrings": {
     "QuantityMeasurementDb": "Server=127.0.0.1,1433;Database=QuantityMeasurementDb;User Id=sa;Password=Vansh@77;Encrypt=False;TrustServerCertificate=True;"
+  },
+  "Jwt": {
+    "Issuer": "QuantityMeasurementApp",
+    "Audience": "QuantityMeasurementApp.Client"
   }
 }
