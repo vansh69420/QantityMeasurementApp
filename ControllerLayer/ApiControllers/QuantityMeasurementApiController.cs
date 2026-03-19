@@ -6,9 +6,11 @@ using Microsoft.AspNetCore.Mvc;
 using ModelLayer.Dtos;
 using ModelLayer.Enums;
 using RepositoryLayer.Repositories;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ControllerLayer.ApiControllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/quantity")]
     public sealed class QuantityMeasurementApiController : ControllerBase

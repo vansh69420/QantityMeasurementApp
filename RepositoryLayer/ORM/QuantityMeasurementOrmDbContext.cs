@@ -11,7 +11,8 @@ namespace RepositoryLayer.Orm
         }
 
         public DbSet<QuantityMeasurementOrmEntity> QuantityMeasurementOperations => Set<QuantityMeasurementOrmEntity>();
-
+        public DbSet<UserOrmEntity> Users { get; set; } = null!;
+        public DbSet<RefreshTokenOrmEntity> RefreshTokens { get; set; } = null!;
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<QuantityMeasurementOrmEntity>(entity =>
@@ -28,6 +29,35 @@ namespace RepositoryLayer.Orm
                 entity.HasIndex(e => e.MeasurementType);
                 entity.HasIndex(e => e.OperationType);
             });
+            modelBuilder.Entity<UserOrmEntity>()
+                .HasIndex(e => e.UserId)
+                .IsUnique();
+
+            modelBuilder.Entity<UserOrmEntity>()
+                .HasIndex(e => e.Username)
+                .IsUnique();
+
+            modelBuilder.Entity<UserOrmEntity>()
+                .HasIndex(e => e.Email)
+                .IsUnique();
+
+            modelBuilder.Entity<RefreshTokenOrmEntity>()
+                .HasIndex(e => e.RefreshTokenId)
+                .IsUnique();
+
+            modelBuilder.Entity<RefreshTokenOrmEntity>()
+                .HasIndex(e => e.UserId);
+
+            modelBuilder.Entity<RefreshTokenOrmEntity>()
+                .HasIndex(e => e.TokenHash)
+                .IsUnique();
+
+            modelBuilder.Entity<RefreshTokenOrmEntity>()
+                .HasOne<UserOrmEntity>()
+                .WithMany()
+                .HasPrincipalKey(u => u.UserId)
+                .HasForeignKey(t => t.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

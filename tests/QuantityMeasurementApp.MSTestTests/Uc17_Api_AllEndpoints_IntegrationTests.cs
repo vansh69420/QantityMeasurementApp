@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -12,6 +13,20 @@ namespace QuantityMeasurementApp.MSTestTests
     [TestClass]
     public sealed class Uc17_Api_AllEndpoints_IntegrationTests
     {
+        private const string TestUsername = "testuser";
+        private const string TestEmail = "testuser@example.com";
+        private const string TestPassword = "P@ssw0rd123!";
+
+        private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
+        private sealed class LoginResponse
+        {
+            public string AccessToken { get; set; } = string.Empty;
+        }
+
         private WebApplicationFactory<Program>? factory;
         private HttpClient? client;
 
@@ -19,8 +34,11 @@ namespace QuantityMeasurementApp.MSTestTests
         public async Task SetUp()
         {
             await Uc17_TestcontainersFixture.ResetStateAsync();
+
             factory = new WebApplicationFactory<Program>();
             client = factory.CreateClient();
+
+            await AuthenticateAndSetBearerAsync();
         }
 
         [TestCleanup]
@@ -68,6 +86,34 @@ namespace QuantityMeasurementApp.MSTestTests
         {
             HttpResponseMessage deleteResponse = await client!.DeleteAsync("/api/quantity/history");
             Assert.AreEqual(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+        }
+
+        private async Task AuthenticateAndSetBearerAsync()
+        {
+            var registerRequest = new
+            {
+                username = TestUsername,
+                email = TestEmail,
+                password = TestPassword
+            };
+
+            HttpResponseMessage registerResponse = await client!.PostAsJsonAsync("/api/auth/register", registerRequest);
+            Assert.AreEqual(HttpStatusCode.Created, registerResponse.StatusCode);
+
+            var loginRequest = new
+            {
+                login = TestUsername,
+                password = TestPassword
+            };
+
+            HttpResponseMessage loginResponse = await client.PostAsJsonAsync("/api/auth/login", loginRequest);
+            Assert.AreEqual(HttpStatusCode.OK, loginResponse.StatusCode);
+
+            LoginResponse? login = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>(JsonOptions);
+            Assert.IsNotNull(login);
+            Assert.IsFalse(string.IsNullOrWhiteSpace(login!.AccessToken));
+
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
         }
 
         private static async Task<int> ReadJsonArrayLength(HttpResponseMessage response)
