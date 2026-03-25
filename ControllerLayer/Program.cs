@@ -5,11 +5,11 @@ using ControllerLayer.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using RepositoryLayer.Orm;
 using RepositoryLayer.Repositories;
 using ServiceLayer.Interfaces;
 using ServiceLayer.Options;
 using ServiceLayer.Services;
-using RepositoryLayer.Orm;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -28,7 +28,7 @@ string ormDatabaseName =
     builder.Configuration["QuantityMeasurement:OrmDatabaseName"]
     ?? "QuantityMeasurementOrmDb";
 
-// Ensure ORM DB exists + apply ALL EF migrations (UC17 + UC18) at startup
+// Ensure ORM DB exists + apply ALL EF migrations at startup
 QuantityMeasurementOrmDatabaseInitializer.EnsureMigrated(baseConnectionString, ormDatabaseName);
 
 // UC18 fail-fast: JWT signing key must exist
@@ -106,15 +106,30 @@ builder.Services.AddSingleton<IAuthRepository>(serviceProvider =>
 {
     IConfiguration configuration = serviceProvider.GetRequiredService<IConfiguration>();
 
-    string baseConnectionString =
+    string configuredBaseConnectionString =
         configuration.GetConnectionString("QuantityMeasurementDb")
         ?? throw new InvalidOperationException("Missing ConnectionStrings:QuantityMeasurementDb.");
 
-    string ormDatabaseName =
+    string configuredOrmDatabaseName =
         configuration["QuantityMeasurement:OrmDatabaseName"]
         ?? "QuantityMeasurementOrmDb";
 
-    return new QuantityMeasurementAuthEfCoreRepository(baseConnectionString, ormDatabaseName);
+    return new QuantityMeasurementAuthEfCoreRepository(configuredBaseConnectionString, configuredOrmDatabaseName);
+});
+
+builder.Services.AddSingleton<IAdminRepository>(serviceProvider =>
+{
+    IConfiguration configuration = serviceProvider.GetRequiredService<IConfiguration>();
+
+    string configuredBaseConnectionString =
+        configuration.GetConnectionString("QuantityMeasurementDb")
+        ?? throw new InvalidOperationException("Missing ConnectionStrings:QuantityMeasurementDb.");
+
+    string configuredOrmDatabaseName =
+        configuration["QuantityMeasurement:OrmDatabaseName"]
+        ?? "QuantityMeasurementOrmDb";
+
+    return new QuantityMeasurementAdminEfCoreRepository(configuredBaseConnectionString, configuredOrmDatabaseName);
 });
 
 // JWT options (15 min)
@@ -132,12 +147,11 @@ builder.Services.AddSingleton(serviceProvider =>
 // Service + Business Controller: Scoped (per HTTP request)
 builder.Services.AddScoped<IQuantityMeasurementService, QuantityMeasurementServiceImpl>();
 builder.Services.AddScoped<QuantityMeasurementController>();
-
 builder.Services.AddScoped<IAuthService, AuthServiceImpl>();
 
 WebApplication app = builder.Build();
 
-app.UseMiddleware<GlobalExceptionMiddleware>();  // First in pipeline
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseSwagger();
 app.UseSwaggerUI();

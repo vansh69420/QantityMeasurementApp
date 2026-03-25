@@ -1,12 +1,12 @@
-// File: ControllerLayer/ApiControllers/QuantityMeasurementApiController.cs
 using System;
+using System.Security.Claims;
 using ControllerLayer.Contracts;
 using ControllerLayer.Controllers;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ModelLayer.Dtos;
 using ModelLayer.Enums;
 using RepositoryLayer.Repositories;
-using Microsoft.AspNetCore.Authorization;
 
 namespace ControllerLayer.ApiControllers
 {
@@ -32,9 +32,16 @@ namespace ControllerLayer.ApiControllers
         [HttpPost("compare")]
         public ActionResult<QuantityDto> Compare([FromBody] CompareRequest compareRequest)
         {
+            ActionResult? currentUserError = GetCurrentUserIdError(out Guid userId);
+            if (currentUserError is not null)
+            {
+                return currentUserError;
+            }
+
             QuantityDto result = quantityMeasurementController.PerformEquality(
                 compareRequest.FirstQuantityDto,
-                compareRequest.SecondQuantityDto);
+                compareRequest.SecondQuantityDto,
+                userId);
 
             return result.HasError ? BadRequest(result) : Ok(result);
         }
@@ -42,9 +49,16 @@ namespace ControllerLayer.ApiControllers
         [HttpPost("convert")]
         public ActionResult<QuantityDto> Convert([FromBody] ConvertRequest convertRequest)
         {
+            ActionResult? currentUserError = GetCurrentUserIdError(out Guid userId);
+            if (currentUserError is not null)
+            {
+                return currentUserError;
+            }
+
             QuantityDto result = quantityMeasurementController.PerformConversion(
                 convertRequest.QuantityDto,
-                convertRequest.TargetUnitText);
+                convertRequest.TargetUnitText,
+                userId);
 
             return result.HasError ? BadRequest(result) : Ok(result);
         }
@@ -52,9 +66,15 @@ namespace ControllerLayer.ApiControllers
         [HttpPost("add")]
         public ActionResult<QuantityDto> Add([FromBody] ArithmeticRequest arithmeticRequest)
         {
+            ActionResult? currentUserError = GetCurrentUserIdError(out Guid userId);
+            if (currentUserError is not null)
+            {
+                return currentUserError;
+            }
+
             QuantityDto result = string.IsNullOrWhiteSpace(arithmeticRequest.TargetUnitText)
-                ? quantityMeasurementController.PerformAddition(arithmeticRequest.FirstQuantityDto, arithmeticRequest.SecondQuantityDto)
-                : quantityMeasurementController.PerformAddition(arithmeticRequest.FirstQuantityDto, arithmeticRequest.SecondQuantityDto, arithmeticRequest.TargetUnitText);
+                ? quantityMeasurementController.PerformAddition(arithmeticRequest.FirstQuantityDto, arithmeticRequest.SecondQuantityDto, userId)
+                : quantityMeasurementController.PerformAddition(arithmeticRequest.FirstQuantityDto, arithmeticRequest.SecondQuantityDto, arithmeticRequest.TargetUnitText, userId);
 
             return result.HasError ? BadRequest(result) : Ok(result);
         }
@@ -62,9 +82,15 @@ namespace ControllerLayer.ApiControllers
         [HttpPost("subtract")]
         public ActionResult<QuantityDto> Subtract([FromBody] ArithmeticRequest arithmeticRequest)
         {
+            ActionResult? currentUserError = GetCurrentUserIdError(out Guid userId);
+            if (currentUserError is not null)
+            {
+                return currentUserError;
+            }
+
             QuantityDto result = string.IsNullOrWhiteSpace(arithmeticRequest.TargetUnitText)
-                ? quantityMeasurementController.PerformSubtraction(arithmeticRequest.FirstQuantityDto, arithmeticRequest.SecondQuantityDto)
-                : quantityMeasurementController.PerformSubtraction(arithmeticRequest.FirstQuantityDto, arithmeticRequest.SecondQuantityDto, arithmeticRequest.TargetUnitText);
+                ? quantityMeasurementController.PerformSubtraction(arithmeticRequest.FirstQuantityDto, arithmeticRequest.SecondQuantityDto, userId)
+                : quantityMeasurementController.PerformSubtraction(arithmeticRequest.FirstQuantityDto, arithmeticRequest.SecondQuantityDto, arithmeticRequest.TargetUnitText, userId);
 
             return result.HasError ? BadRequest(result) : Ok(result);
         }
@@ -72,56 +98,108 @@ namespace ControllerLayer.ApiControllers
         [HttpPost("divide")]
         public ActionResult<QuantityDto> Divide([FromBody] ArithmeticRequest arithmeticRequest)
         {
+            ActionResult? currentUserError = GetCurrentUserIdError(out Guid userId);
+            if (currentUserError is not null)
+            {
+                return currentUserError;
+            }
+
             QuantityDto result = quantityMeasurementController.PerformDivision(
                 arithmeticRequest.FirstQuantityDto,
-                arithmeticRequest.SecondQuantityDto);
+                arithmeticRequest.SecondQuantityDto,
+                userId);
 
             return result.HasError ? BadRequest(result) : Ok(result);
         }
 
-        // ---------------- History endpoints (UC17 REST additions) ----------------
-
         [HttpGet("history")]
         public ActionResult GetHistory()
         {
-            return Ok(quantityMeasurementRepository.GetAll());
+            ActionResult? currentUserError = GetCurrentUserIdError(out Guid userId);
+            if (currentUserError is not null)
+            {
+                return currentUserError;
+            }
+
+            return Ok(quantityMeasurementRepository.GetAllByUserId(userId));
         }
 
         [HttpGet("history/measurementType/{measurementType}")]
         public ActionResult GetHistoryByMeasurementType(string measurementType)
         {
+            ActionResult? currentUserError = GetCurrentUserIdError(out Guid userId);
+            if (currentUserError is not null)
+            {
+                return currentUserError;
+            }
+
             if (!Enum.TryParse(measurementType, ignoreCase: true, out MeasurementType parsedMeasurementType))
             {
                 return BadRequest(new { message = "Invalid measurementType. Use Length/Weight/Volume/Temperature." });
             }
 
-            return Ok(quantityMeasurementRepository.GetByMeasurementType(parsedMeasurementType));
+            return Ok(quantityMeasurementRepository.GetByMeasurementTypeAndUserId(parsedMeasurementType, userId));
         }
 
         [HttpGet("history/operationType/{operationType}")]
         public ActionResult GetHistoryByOperationType(string operationType)
         {
+            ActionResult? currentUserError = GetCurrentUserIdError(out Guid userId);
+            if (currentUserError is not null)
+            {
+                return currentUserError;
+            }
+
             if (!Enum.TryParse(operationType, ignoreCase: true, out OperationType parsedOperationType))
             {
                 return BadRequest(new { message = "Invalid operationType. Use CompareEquality/Convert/Add/Subtract/Divide." });
             }
 
-            return Ok(quantityMeasurementRepository.GetByOperationType(parsedOperationType));
+            return Ok(quantityMeasurementRepository.GetByOperationTypeAndUserId(parsedOperationType, userId));
         }
 
         [HttpGet("count")]
         public ActionResult GetTotalCount()
         {
-            int totalCount = quantityMeasurementRepository.GetTotalCount();
+            ActionResult? currentUserError = GetCurrentUserIdError(out Guid userId);
+            if (currentUserError is not null)
+            {
+                return currentUserError;
+            }
+
+            int totalCount = quantityMeasurementRepository.GetTotalCountByUserId(userId);
             return Ok(new { totalCount });
         }
 
         [HttpDelete("history")]
         public ActionResult DeleteHistory()
         {
-            // Deletes only operations. In UC16 DB, trigger writes DELETE audit rows.
-            quantityMeasurementRepository.DeleteAll();
+            ActionResult? currentUserError = GetCurrentUserIdError(out Guid userId);
+            if (currentUserError is not null)
+            {
+                return currentUserError;
+            }
+
+            quantityMeasurementRepository.DeleteByUserId(userId);
             return NoContent();
+        }
+
+        private ActionResult? GetCurrentUserIdError(out Guid userId)
+        {
+            userId = Guid.Empty;
+
+            string? userIdText =
+                User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? User.FindFirst("sub")?.Value
+                ?? User.FindFirst("userId")?.Value
+                ?? User.FindFirst("userid")?.Value;
+
+            if (string.IsNullOrWhiteSpace(userIdText) || !Guid.TryParse(userIdText, out userId) || userId == Guid.Empty)
+            {
+                return Unauthorized(new { message = "User identifier claim is missing or invalid." });
+            }
+
+            return null;
         }
     }
 }

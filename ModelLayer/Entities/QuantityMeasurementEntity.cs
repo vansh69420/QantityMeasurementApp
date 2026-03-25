@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 using ModelLayer.Enums;
 
 namespace ModelLayer.Entities
@@ -25,6 +26,44 @@ namespace ModelLayer.Entities
             string? resultUnitText,
             bool hasError,
             string? errorMessage)
+            : this(
+                operationId,
+                timestampUtc,
+                measurementType,
+                operationType,
+                firstValue,
+                firstUnitText,
+                secondValue,
+                secondUnitText,
+                targetUnitText,
+                equalityResult,
+                scalarResult,
+                resultValue,
+                resultUnitText,
+                hasError,
+                errorMessage,
+                userId: null)
+        {
+        }
+
+        [JsonConstructor]
+        public QuantityMeasurementEntity(
+            Guid operationId,
+            DateTime timestampUtc,
+            MeasurementType measurementType,
+            OperationType operationType,
+            double firstValue,
+            string firstUnitText,
+            double? secondValue,
+            string? secondUnitText,
+            string? targetUnitText,
+            bool? equalityResult,
+            double? scalarResult,
+            double? resultValue,
+            string? resultUnitText,
+            bool hasError,
+            string? errorMessage,
+            Guid? userId)
         {
             OperationId = operationId;
             TimestampUtc = timestampUtc;
@@ -47,6 +86,8 @@ namespace ModelLayer.Entities
 
             HasError = hasError;
             ErrorMessage = errorMessage;
+
+            UserId = userId;
         }
 
         public Guid OperationId { get; }
@@ -79,6 +120,7 @@ namespace ModelLayer.Entities
 
         public string? ErrorMessage { get; }
 
+        public Guid? UserId { get; }
 
         public override string ToString()
         {

@@ -12,5 +12,7 @@ namespace RepositoryLayer.Redis
         public static string IndexMeasurementType(int measurementType) => $"qm:idx:mt:{measurementType}";
 
         public static string IndexOperationType(int operationType) => $"qm:idx:op:{operationType}";
+
+        public static string IndexUserId(string userId) => $"qm:idx:user:{userId}";
     }
 }

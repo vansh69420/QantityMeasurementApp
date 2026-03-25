@@ -21,37 +21,72 @@ namespace ControllerLayer.Controllers
 
         public QuantityDto PerformEquality(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto)
         {
-            return quantityMeasurementService.CompareEquality(firstQuantityDto, secondQuantityDto);
+            return PerformEquality(firstQuantityDto, secondQuantityDto, userId: null);
+        }
+
+        public QuantityDto PerformEquality(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, Guid? userId)
+        {
+            return quantityMeasurementService.CompareEquality(firstQuantityDto, secondQuantityDto, userId);
         }
 
         public QuantityDto PerformConversion(QuantityDto quantityDto, string targetUnitText)
         {
-            return quantityMeasurementService.Convert(quantityDto, targetUnitText);
+            return PerformConversion(quantityDto, targetUnitText, userId: null);
+        }
+
+        public QuantityDto PerformConversion(QuantityDto quantityDto, string targetUnitText, Guid? userId)
+        {
+            return quantityMeasurementService.Convert(quantityDto, targetUnitText, userId);
         }
 
         public QuantityDto PerformAddition(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto)
         {
-            return quantityMeasurementService.Add(firstQuantityDto, secondQuantityDto);
+            return PerformAddition(firstQuantityDto, secondQuantityDto, userId: null);
+        }
+
+        public QuantityDto PerformAddition(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, Guid? userId)
+        {
+            return quantityMeasurementService.Add(firstQuantityDto, secondQuantityDto, userId);
         }
 
         public QuantityDto PerformAddition(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, string targetUnitText)
         {
-            return quantityMeasurementService.Add(firstQuantityDto, secondQuantityDto, targetUnitText);
+            return PerformAddition(firstQuantityDto, secondQuantityDto, targetUnitText, userId: null);
+        }
+
+        public QuantityDto PerformAddition(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, string targetUnitText, Guid? userId)
+        {
+            return quantityMeasurementService.Add(firstQuantityDto, secondQuantityDto, targetUnitText, userId);
         }
 
         public QuantityDto PerformSubtraction(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto)
         {
-            return quantityMeasurementService.Subtract(firstQuantityDto, secondQuantityDto);
+            return PerformSubtraction(firstQuantityDto, secondQuantityDto, userId: null);
+        }
+
+        public QuantityDto PerformSubtraction(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, Guid? userId)
+        {
+            return quantityMeasurementService.Subtract(firstQuantityDto, secondQuantityDto, userId);
         }
 
         public QuantityDto PerformSubtraction(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, string targetUnitText)
         {
-            return quantityMeasurementService.Subtract(firstQuantityDto, secondQuantityDto, targetUnitText);
+            return PerformSubtraction(firstQuantityDto, secondQuantityDto, targetUnitText, userId: null);
+        }
+
+        public QuantityDto PerformSubtraction(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, string targetUnitText, Guid? userId)
+        {
+            return quantityMeasurementService.Subtract(firstQuantityDto, secondQuantityDto, targetUnitText, userId);
         }
 
         public QuantityDto PerformDivision(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto)
         {
-            return quantityMeasurementService.Divide(firstQuantityDto, secondQuantityDto);
+            return PerformDivision(firstQuantityDto, secondQuantityDto, userId: null);
+        }
+
+        public QuantityDto PerformDivision(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, Guid? userId)
+        {
+            return quantityMeasurementService.Divide(firstQuantityDto, secondQuantityDto, userId);
         }
 
         /// <summary>

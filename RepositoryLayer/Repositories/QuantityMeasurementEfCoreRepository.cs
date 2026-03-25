@@ -73,21 +73,40 @@ namespace RepositoryLayer.Repositories
                 using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
 
                 List<QuantityMeasurementOrmEntity> rows = dbContext.QuantityMeasurementOperations
+                    .AsNoTracking()
                     .OrderByDescending(e => e.TimestampUtc)
                     .ToList();
 
-                List<QuantityMeasurementEntity> entities = new List<QuantityMeasurementEntity>(rows.Count);
-
-                foreach (QuantityMeasurementOrmEntity row in rows)
-                {
-                    entities.Add(MapToDomain(row));
-                }
-
-                return entities.AsReadOnly();
+                return MapRowsToDomain(rows);
             }
             catch (Exception exception)
             {
                 throw new DatabaseException("EF Core GetAll operation failed.", exception);
+            }
+        }
+
+        public IReadOnlyList<QuantityMeasurementEntity> GetAllByUserId(Guid userId)
+        {
+            if (userId == Guid.Empty)
+            {
+                throw new ArgumentException("UserId cannot be empty.", nameof(userId));
+            }
+
+            try
+            {
+                using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
+
+                List<QuantityMeasurementOrmEntity> rows = dbContext.QuantityMeasurementOperations
+                    .AsNoTracking()
+                    .Where(e => e.UserId == userId)
+                    .OrderByDescending(e => e.TimestampUtc)
+                    .ToList();
+
+                return MapRowsToDomain(rows);
+            }
+            catch (Exception exception)
+            {
+                throw new DatabaseException("EF Core GetAllByUserId operation failed.", exception);
             }
         }
 
@@ -98,22 +117,41 @@ namespace RepositoryLayer.Repositories
                 using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
 
                 List<QuantityMeasurementOrmEntity> rows = dbContext.QuantityMeasurementOperations
+                    .AsNoTracking()
                     .Where(e => e.MeasurementType == (int)measurementType)
                     .OrderByDescending(e => e.TimestampUtc)
                     .ToList();
 
-                List<QuantityMeasurementEntity> entities = new List<QuantityMeasurementEntity>(rows.Count);
-
-                foreach (QuantityMeasurementOrmEntity row in rows)
-                {
-                    entities.Add(MapToDomain(row));
-                }
-
-                return entities.AsReadOnly();
+                return MapRowsToDomain(rows);
             }
             catch (Exception exception)
             {
                 throw new DatabaseException("EF Core GetByMeasurementType operation failed.", exception);
+            }
+        }
+
+        public IReadOnlyList<QuantityMeasurementEntity> GetByMeasurementTypeAndUserId(MeasurementType measurementType, Guid userId)
+        {
+            if (userId == Guid.Empty)
+            {
+                throw new ArgumentException("UserId cannot be empty.", nameof(userId));
+            }
+
+            try
+            {
+                using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
+
+                List<QuantityMeasurementOrmEntity> rows = dbContext.QuantityMeasurementOperations
+                    .AsNoTracking()
+                    .Where(e => e.UserId == userId && e.MeasurementType == (int)measurementType)
+                    .OrderByDescending(e => e.TimestampUtc)
+                    .ToList();
+
+                return MapRowsToDomain(rows);
+            }
+            catch (Exception exception)
+            {
+                throw new DatabaseException("EF Core GetByMeasurementTypeAndUserId operation failed.", exception);
             }
         }
 
@@ -124,22 +162,41 @@ namespace RepositoryLayer.Repositories
                 using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
 
                 List<QuantityMeasurementOrmEntity> rows = dbContext.QuantityMeasurementOperations
+                    .AsNoTracking()
                     .Where(e => e.OperationType == (int)operationType)
                     .OrderByDescending(e => e.TimestampUtc)
                     .ToList();
 
-                List<QuantityMeasurementEntity> entities = new List<QuantityMeasurementEntity>(rows.Count);
-
-                foreach (QuantityMeasurementOrmEntity row in rows)
-                {
-                    entities.Add(MapToDomain(row));
-                }
-
-                return entities.AsReadOnly();
+                return MapRowsToDomain(rows);
             }
             catch (Exception exception)
             {
                 throw new DatabaseException("EF Core GetByOperationType operation failed.", exception);
+            }
+        }
+
+        public IReadOnlyList<QuantityMeasurementEntity> GetByOperationTypeAndUserId(OperationType operationType, Guid userId)
+        {
+            if (userId == Guid.Empty)
+            {
+                throw new ArgumentException("UserId cannot be empty.", nameof(userId));
+            }
+
+            try
+            {
+                using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
+
+                List<QuantityMeasurementOrmEntity> rows = dbContext.QuantityMeasurementOperations
+                    .AsNoTracking()
+                    .Where(e => e.UserId == userId && e.OperationType == (int)operationType)
+                    .OrderByDescending(e => e.TimestampUtc)
+                    .ToList();
+
+                return MapRowsToDomain(rows);
+            }
+            catch (Exception exception)
+            {
+                throw new DatabaseException("EF Core GetByOperationTypeAndUserId operation failed.", exception);
             }
         }
 
@@ -153,6 +210,24 @@ namespace RepositoryLayer.Repositories
             catch (Exception exception)
             {
                 throw new DatabaseException("EF Core GetTotalCount operation failed.", exception);
+            }
+        }
+
+        public int GetTotalCountByUserId(Guid userId)
+        {
+            if (userId == Guid.Empty)
+            {
+                throw new ArgumentException("UserId cannot be empty.", nameof(userId));
+            }
+
+            try
+            {
+                using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
+                return dbContext.QuantityMeasurementOperations.Count(e => e.UserId == userId);
+            }
+            catch (Exception exception)
+            {
+                throw new DatabaseException("EF Core GetTotalCountByUserId operation failed.", exception);
             }
         }
 
@@ -172,6 +247,25 @@ namespace RepositoryLayer.Repositories
             }
         }
 
+        public void DeleteByUserId(Guid userId)
+        {
+            if (userId == Guid.Empty)
+            {
+                throw new ArgumentException("UserId cannot be empty.", nameof(userId));
+            }
+
+            try
+            {
+                using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
+                dbContext.Database.ExecuteSqlInterpolated(
+                    $"DELETE FROM dbo.QuantityMeasurementOperations WHERE UserId = {userId};");
+            }
+            catch (Exception exception)
+            {
+                throw new DatabaseException("EF Core DeleteByUserId operation failed.", exception);
+            }
+        }
+
         public void Clear()
         {
             DeleteAll();
@@ -180,6 +274,18 @@ namespace RepositoryLayer.Repositories
         public void ReleaseResources()
         {
             // No persistent resources to release here.
+        }
+
+        private static IReadOnlyList<QuantityMeasurementEntity> MapRowsToDomain(List<QuantityMeasurementOrmEntity> rows)
+        {
+            List<QuantityMeasurementEntity> entities = new List<QuantityMeasurementEntity>(rows.Count);
+
+            foreach (QuantityMeasurementOrmEntity row in rows)
+            {
+                entities.Add(MapToDomain(row));
+            }
+
+            return entities.AsReadOnly();
         }
 
         private static QuantityMeasurementOrmEntity MapToOrm(QuantityMeasurementEntity entity)
@@ -205,6 +311,8 @@ namespace RepositoryLayer.Repositories
 
                 ResultValue = entity.ResultValue,
                 ResultUnitText = entity.ResultUnitText,
+
+                UserId = entity.UserId,
 
                 HasError = entity.HasError,
                 ErrorMessage = entity.ErrorMessage
@@ -232,6 +340,8 @@ namespace RepositoryLayer.Repositories
             existing.ResultValue = entity.ResultValue;
             existing.ResultUnitText = entity.ResultUnitText;
 
+            existing.UserId = entity.UserId;
+
             existing.HasError = entity.HasError;
             existing.ErrorMessage = entity.ErrorMessage;
         }
@@ -255,7 +365,8 @@ namespace RepositoryLayer.Repositories
                 row.ResultValue,
                 row.ResultUnitText,
                 row.HasError,
-                row.ErrorMessage);
+                row.ErrorMessage,
+                row.UserId);
         }
     }
 }
