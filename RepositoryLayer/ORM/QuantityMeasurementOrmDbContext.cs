@@ -13,6 +13,7 @@ namespace RepositoryLayer.Orm
         public DbSet<QuantityMeasurementOrmEntity> QuantityMeasurementOperations => Set<QuantityMeasurementOrmEntity>();
         public DbSet<UserOrmEntity> Users { get; set; } = null!;
         public DbSet<RefreshTokenOrmEntity> RefreshTokens { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<QuantityMeasurementOrmEntity>(entity =>
@@ -28,7 +29,9 @@ namespace RepositoryLayer.Orm
                 entity.HasIndex(e => e.TimestampUtc);
                 entity.HasIndex(e => e.MeasurementType);
                 entity.HasIndex(e => e.OperationType);
+                entity.HasIndex(e => e.UserId);
             });
+
             modelBuilder.Entity<UserOrmEntity>()
                 .HasIndex(e => e.UserId)
                 .IsUnique();

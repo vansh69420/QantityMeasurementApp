@@ -9,26 +9,66 @@ namespace QuantityMeasurementApp.NUnitTests
 {
     internal sealed class FakeQuantityMeasurementService : IQuantityMeasurementService
     {
-        public QuantityDto CompareEquality(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto) =>
-            new QuantityDto { OperationType = OperationType.CompareEquality, MeasurementType = firstQuantityDto.MeasurementType, EqualityResult = true };
+        public QuantityDto CompareEquality(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, Guid? userId = null) =>
+            new QuantityDto
+            {
+                OperationType = OperationType.CompareEquality,
+                MeasurementType = firstQuantityDto.MeasurementType,
+                EqualityResult = true
+            };
 
-        public QuantityDto Convert(QuantityDto quantityDto, string targetUnitText) =>
-            new QuantityDto { OperationType = OperationType.Convert, MeasurementType = quantityDto.MeasurementType, ResultValue = 12.0, ResultUnitText = targetUnitText };
+        public QuantityDto Convert(QuantityDto quantityDto, string targetUnitText, Guid? userId = null) =>
+            new QuantityDto
+            {
+                OperationType = OperationType.Convert,
+                MeasurementType = quantityDto.MeasurementType,
+                ResultValue = 12.0,
+                ResultUnitText = targetUnitText
+            };
 
-        public QuantityDto Add(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto) =>
-            new QuantityDto { OperationType = OperationType.Add, MeasurementType = firstQuantityDto.MeasurementType, ResultValue = 2.0, ResultUnitText = firstQuantityDto.FirstUnitText };
+        public QuantityDto Add(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, Guid? userId = null) =>
+            new QuantityDto
+            {
+                OperationType = OperationType.Add,
+                MeasurementType = firstQuantityDto.MeasurementType,
+                ResultValue = 2.0,
+                ResultUnitText = firstQuantityDto.FirstUnitText
+            };
 
-        public QuantityDto Add(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, string targetUnitText) =>
-            new QuantityDto { OperationType = OperationType.Add, MeasurementType = firstQuantityDto.MeasurementType, ResultValue = 2.0, ResultUnitText = targetUnitText };
+        public QuantityDto Add(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, string targetUnitText, Guid? userId = null) =>
+            new QuantityDto
+            {
+                OperationType = OperationType.Add,
+                MeasurementType = firstQuantityDto.MeasurementType,
+                ResultValue = 2.0,
+                ResultUnitText = targetUnitText
+            };
 
-        public QuantityDto Subtract(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto) =>
-            new QuantityDto { OperationType = OperationType.Subtract, MeasurementType = firstQuantityDto.MeasurementType, ResultValue = 1.0, ResultUnitText = firstQuantityDto.FirstUnitText };
+        public QuantityDto Subtract(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, Guid? userId = null) =>
+            new QuantityDto
+            {
+                OperationType = OperationType.Subtract,
+                MeasurementType = firstQuantityDto.MeasurementType,
+                ResultValue = 1.0,
+                ResultUnitText = firstQuantityDto.FirstUnitText
+            };
 
-        public QuantityDto Subtract(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, string targetUnitText) =>
-            new QuantityDto { OperationType = OperationType.Subtract, MeasurementType = firstQuantityDto.MeasurementType, ResultValue = 1.0, ResultUnitText = targetUnitText };
+        public QuantityDto Subtract(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, string targetUnitText, Guid? userId = null) =>
+            new QuantityDto
+            {
+                OperationType = OperationType.Subtract,
+                MeasurementType = firstQuantityDto.MeasurementType,
+                ResultValue = 1.0,
+                ResultUnitText = targetUnitText
+            };
 
-        public QuantityDto Divide(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto) =>
-            new QuantityDto { OperationType = OperationType.Divide, MeasurementType = firstQuantityDto.MeasurementType, ScalarResult = 5.0 };
+        public QuantityDto Divide(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, Guid? userId = null) =>
+            new QuantityDto
+            {
+                OperationType = OperationType.Divide,
+                MeasurementType = firstQuantityDto.MeasurementType,
+                ScalarResult = 5.0
+            };
     }
 
     [TestFixture]
@@ -81,7 +121,6 @@ namespace QuantityMeasurementApp.NUnitTests
         [Test]
         public void testController_DemonstrateAddition_Error()
         {
-            // Simulate error DTO returned by service
             IQuantityMeasurementService errorService = new FakeErrorService();
             var controller = new QuantityMeasurementController(errorService);
 
@@ -156,13 +195,26 @@ namespace QuantityMeasurementApp.NUnitTests
 
         private sealed class FakeErrorService : IQuantityMeasurementService
         {
-            public QuantityDto CompareEquality(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto) => new QuantityDto { HasError = true, ErrorMessage = "error" };
-            public QuantityDto Convert(QuantityDto quantityDto, string targetUnitText) => new QuantityDto { HasError = true, ErrorMessage = "error" };
-            public QuantityDto Add(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto) => new QuantityDto { HasError = true, ErrorMessage = "error" };
-            public QuantityDto Add(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, string targetUnitText) => new QuantityDto { HasError = true, ErrorMessage = "error" };
-            public QuantityDto Subtract(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto) => new QuantityDto { HasError = true, ErrorMessage = "error" };
-            public QuantityDto Subtract(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, string targetUnitText) => new QuantityDto { HasError = true, ErrorMessage = "error" };
-            public QuantityDto Divide(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto) => new QuantityDto { HasError = true, ErrorMessage = "error" };
+            public QuantityDto CompareEquality(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, Guid? userId = null) =>
+                new QuantityDto { HasError = true, ErrorMessage = "error" };
+
+            public QuantityDto Convert(QuantityDto quantityDto, string targetUnitText, Guid? userId = null) =>
+                new QuantityDto { HasError = true, ErrorMessage = "error" };
+
+            public QuantityDto Add(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, Guid? userId = null) =>
+                new QuantityDto { HasError = true, ErrorMessage = "error" };
+
+            public QuantityDto Add(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, string targetUnitText, Guid? userId = null) =>
+                new QuantityDto { HasError = true, ErrorMessage = "error" };
+
+            public QuantityDto Subtract(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, Guid? userId = null) =>
+                new QuantityDto { HasError = true, ErrorMessage = "error" };
+
+            public QuantityDto Subtract(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, string targetUnitText, Guid? userId = null) =>
+                new QuantityDto { HasError = true, ErrorMessage = "error" };
+
+            public QuantityDto Divide(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, Guid? userId = null) =>
+                new QuantityDto { HasError = true, ErrorMessage = "error" };
         }
     }
 }

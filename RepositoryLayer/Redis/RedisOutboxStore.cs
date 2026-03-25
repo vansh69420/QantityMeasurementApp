@@ -35,24 +35,25 @@ namespace RepositoryLayer.Redis
             string operationId = entity.OperationId.ToString();
             string entityKey = RedisKeys.Entity(operationId);
 
+            QuantityMeasurementEntity? existingEntity = TryGetEntity(entityKey);
+            if (existingEntity is not null)
+            {
+                RemoveIndexEntries(operationId, existingEntity);
+            }
+
             string json = JsonSerializer.Serialize(entity, jsonOptions);
 
-            // Store entity body
             database.StringSet(entityKey, json);
 
-            // De-dup using a set. Only enqueue if new.
             bool isNew = database.SetAdd(RedisKeys.OutboxIds, operationId);
+
+            AddIndexEntries(operationId, entity);
+
             if (!isNew)
             {
-                // Update payload but do not enqueue duplicate id.
                 return;
             }
 
-            // Index for filtering
-            database.SetAdd(RedisKeys.IndexMeasurementType((int)entity.MeasurementType), operationId);
-            database.SetAdd(RedisKeys.IndexOperationType((int)entity.OperationType), operationId);
-
-            // FIFO: LPUSH new items; flush uses RPOPLPUSH to process oldest first.
             database.ListLeftPush(RedisKeys.OutboxPending, operationId);
         }
 
@@ -67,6 +68,16 @@ namespace RepositoryLayer.Redis
             AddEntitiesFromIds(result, processingIds);
 
             return result.AsReadOnly();
+        }
+
+        public IReadOnlyList<QuantityMeasurementEntity> GetPendingByUserId(Guid userId)
+        {
+            if (userId == Guid.Empty)
+            {
+                throw new ArgumentException("UserId cannot be empty.", nameof(userId));
+            }
+
+            return GetPendingByIndexKey(RedisKeys.IndexUserId(userId.ToString("D")));
         }
 
         public IReadOnlyList<QuantityMeasurementEntity> GetPendingByMeasurementType(int measurementType)
@@ -86,6 +97,36 @@ namespace RepositoryLayer.Redis
             return (int)(pending + processing);
         }
 
+        public int GetPendingCountByUserId(Guid userId)
+        {
+            if (userId == Guid.Empty)
+            {
+                throw new ArgumentException("UserId cannot be empty.", nameof(userId));
+            }
+
+            return GetPendingByUserId(userId).Count;
+        }
+
+        public void ClearByUserId(Guid userId)
+        {
+            if (userId == Guid.Empty)
+            {
+                throw new ArgumentException("UserId cannot be empty.", nameof(userId));
+            }
+
+            string userIndexKey = RedisKeys.IndexUserId(userId.ToString("D"));
+            RedisValue[] ids = database.SetMembers(userIndexKey);
+
+            foreach (RedisValue idValue in ids)
+            {
+                string operationId = idValue.ToString();
+                string entityKey = RedisKeys.Entity(operationId);
+                RemoveFromAllCollectionsAndCleanup(operationId, entityKey);
+            }
+
+            database.KeyDelete(userIndexKey);
+        }
+
         /// <summary>
         /// Flushes everything possible to DB. Returns true if DB appears available, false if a DB failure occurred.
         /// </summary>
@@ -96,13 +137,11 @@ namespace RepositoryLayer.Redis
                 throw new ArgumentNullException(nameof(persistToDatabase));
             }
 
-            // Acquire flush lock to avoid multiple concurrent flushers.
             string lockValue = Guid.NewGuid().ToString("N");
             bool lockAcquired = database.StringSet(RedisKeys.FlushLock, lockValue, expiry: TimeSpan.FromSeconds(10), when: When.NotExists);
 
             if (!lockAcquired)
             {
-                // Someone else is flushing; we won't treat this as DB down.
                 return true;
             }
 
@@ -121,29 +160,10 @@ namespace RepositoryLayer.Redis
                     string operationId = operationIdValue.ToString();
                     string entityKey = RedisKeys.Entity(operationId);
 
-                    RedisValue jsonValue = database.StringGet(entityKey);
-                    if (jsonValue.IsNullOrEmpty)
-                    {
-                        // Bad state: remove id from processing and ids set
-                        RemoveFromProcessingAndCleanup(operationId, entityKey);
-                        continue;
-                    }
-
-                    QuantityMeasurementEntity? entity;
-                    try
-                    {
-                        entity = JsonSerializer.Deserialize<QuantityMeasurementEntity>(jsonValue.ToString(), jsonOptions);
-                    }
-                    catch
-                    {
-                        // Corrupted JSON: drop it from outbox to prevent infinite loop.
-                        RemoveFromProcessingAndCleanup(operationId, entityKey);
-                        continue;
-                    }
-
+                    QuantityMeasurementEntity? entity = TryGetEntity(entityKey);
                     if (entity is null)
                     {
-                        RemoveFromProcessingAndCleanup(operationId, entityKey);
+                        RemoveFromAllCollectionsAndCleanup(operationId, entityKey);
                         continue;
                     }
 
@@ -152,17 +172,14 @@ namespace RepositoryLayer.Redis
                         bool persisted = persistToDatabase(entity);
                         if (!persisted)
                         {
-                            // Treat as DB down if persist returned false.
                             RequeueAndStop(operationId);
                             return false;
                         }
 
-                        // Success: remove from processing and cleanup
-                        RemoveFromProcessingAndCleanup(operationId, entityKey);
+                        RemoveFromAllCollectionsAndCleanup(operationId, entityKey);
                     }
                     catch
                     {
-                        // DB failed: keep it pending and stop (R-A1 wants Redis-only when DB down)
                         RequeueAndStop(operationId);
                         return false;
                     }
@@ -170,29 +187,24 @@ namespace RepositoryLayer.Redis
             }
             finally
             {
-                // Release lock (best-effort). If it expires, it will auto-release.
                 database.KeyDelete(RedisKeys.FlushLock);
             }
         }
 
         public void ClearAll()
         {
-            // Delete all entities referenced by OutboxIds
             RedisValue[] ids = database.SetMembers(RedisKeys.OutboxIds);
 
             foreach (RedisValue idValue in ids)
             {
                 string operationId = idValue.ToString();
-                database.KeyDelete(RedisKeys.Entity(operationId));
+                string entityKey = RedisKeys.Entity(operationId);
+                RemoveFromAllCollectionsAndCleanup(operationId, entityKey);
             }
 
             database.KeyDelete(RedisKeys.OutboxPending);
             database.KeyDelete(RedisKeys.OutboxProcessing);
             database.KeyDelete(RedisKeys.OutboxIds);
-
-            // Note: index sets remain unless we delete them. Since this is temporary memory,
-            // we remove members instead of scanning keys; simplest approach: delete known patterns is not possible without admin.
-            // We will remove members opportunistically during cleanup in RemoveFromProcessingAndCleanup.
         }
 
         private void AddEntitiesFromIds(List<QuantityMeasurementEntity> output, RedisValue[] ids)
@@ -200,24 +212,12 @@ namespace RepositoryLayer.Redis
             foreach (RedisValue idValue in ids)
             {
                 string operationId = idValue.ToString();
-                RedisValue jsonValue = database.StringGet(RedisKeys.Entity(operationId));
+                string entityKey = RedisKeys.Entity(operationId);
 
-                if (jsonValue.IsNullOrEmpty)
+                QuantityMeasurementEntity? entity = TryGetEntity(entityKey);
+                if (entity is not null)
                 {
-                    continue;
-                }
-
-                try
-                {
-                    QuantityMeasurementEntity? entity = JsonSerializer.Deserialize<QuantityMeasurementEntity>(jsonValue.ToString(), jsonOptions);
-                    if (entity != null)
-                    {
-                        output.Add(entity);
-                    }
-                }
-                catch
-                {
-                    // Ignore bad json
+                    output.Add(entity);
                 }
             }
         }
@@ -244,32 +244,60 @@ namespace RepositoryLayer.Redis
             }
         }
 
-        private void RemoveFromProcessingAndCleanup(string operationId, string entityKey)
+        private void RemoveFromAllCollectionsAndCleanup(string operationId, string entityKey)
         {
-            database.ListRemove(RedisKeys.OutboxProcessing, operationId, count: 1);
+            QuantityMeasurementEntity? entity = TryGetEntity(entityKey);
+
+            database.ListRemove(RedisKeys.OutboxPending, operationId, count: 0);
+            database.ListRemove(RedisKeys.OutboxProcessing, operationId, count: 0);
             database.SetRemove(RedisKeys.OutboxIds, operationId);
 
-            // Remove indexes (best effort)
-            // We do not know measurementType/opType here without parsing; but we can attempt parse if entity exists.
-            RedisValue jsonValue = database.StringGet(entityKey);
-            if (!jsonValue.IsNullOrEmpty)
+            if (entity is not null)
             {
-                try
-                {
-                    QuantityMeasurementEntity? entity = JsonSerializer.Deserialize<QuantityMeasurementEntity>(jsonValue.ToString(), jsonOptions);
-                    if (entity != null)
-                    {
-                        database.SetRemove(RedisKeys.IndexMeasurementType((int)entity.MeasurementType), operationId);
-                        database.SetRemove(RedisKeys.IndexOperationType((int)entity.OperationType), operationId);
-                    }
-                }
-                catch
-                {
-                    // ignore
-                }
+                RemoveIndexEntries(operationId, entity);
             }
 
             database.KeyDelete(entityKey);
+        }
+
+        private void AddIndexEntries(string operationId, QuantityMeasurementEntity entity)
+        {
+            database.SetAdd(RedisKeys.IndexMeasurementType((int)entity.MeasurementType), operationId);
+            database.SetAdd(RedisKeys.IndexOperationType((int)entity.OperationType), operationId);
+
+            if (entity.UserId.HasValue && entity.UserId.Value != Guid.Empty)
+            {
+                database.SetAdd(RedisKeys.IndexUserId(entity.UserId.Value.ToString("D")), operationId);
+            }
+        }
+
+        private void RemoveIndexEntries(string operationId, QuantityMeasurementEntity entity)
+        {
+            database.SetRemove(RedisKeys.IndexMeasurementType((int)entity.MeasurementType), operationId);
+            database.SetRemove(RedisKeys.IndexOperationType((int)entity.OperationType), operationId);
+
+            if (entity.UserId.HasValue && entity.UserId.Value != Guid.Empty)
+            {
+                database.SetRemove(RedisKeys.IndexUserId(entity.UserId.Value.ToString("D")), operationId);
+            }
+        }
+
+        private QuantityMeasurementEntity? TryGetEntity(string entityKey)
+        {
+            RedisValue jsonValue = database.StringGet(entityKey);
+            if (jsonValue.IsNullOrEmpty)
+            {
+                return null;
+            }
+
+            try
+            {
+                return JsonSerializer.Deserialize<QuantityMeasurementEntity>(jsonValue.ToString(), jsonOptions);
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private void RequeueAndStop(string operationId)

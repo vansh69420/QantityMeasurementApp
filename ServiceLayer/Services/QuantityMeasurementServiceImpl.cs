@@ -29,14 +29,17 @@ namespace ServiceLayer.Services
                 ?? throw new ArgumentNullException(nameof(quantityMeasurementRepository));
         }
 
-        public QuantityDto CompareEquality(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto)
+        public QuantityDto CompareEquality(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, Guid? userId = null)
         {
+            Guid? normalizedUserId = NormalizeUserId(userId);
+
             return ExecuteBinaryOperation(
                 MeasurementTypeFromDtos(firstQuantityDto, secondQuantityDto),
                 OperationType.CompareEquality,
                 firstQuantityDto,
                 secondQuantityDto,
                 targetUnitText: null,
+                normalizedUserId,
                 (firstQuantityModel, secondQuantityModel, targetUnit) =>
                 {
                     bool isEqual = CompareEqualityInternal(firstQuantityModel, secondQuantityModel);
@@ -44,12 +47,15 @@ namespace ServiceLayer.Services
                 });
         }
 
-        public QuantityDto Convert(QuantityDto quantityDto, string targetUnitText)
+        public QuantityDto Convert(QuantityDto quantityDto, string targetUnitText, Guid? userId = null)
         {
+            Guid? normalizedUserId = NormalizeUserId(userId);
+
             return ExecuteSingleOperation(
                 quantityDto,
                 OperationType.Convert,
                 targetUnitText,
+                normalizedUserId,
                 (quantityModel, targetUnit) =>
                 {
                     (double convertedValue, string convertedUnitText) = ConvertInternal(quantityModel, targetUnit);
@@ -57,14 +63,17 @@ namespace ServiceLayer.Services
                 });
         }
 
-        public QuantityDto Add(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto)
+        public QuantityDto Add(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, Guid? userId = null)
         {
+            Guid? normalizedUserId = NormalizeUserId(userId);
+
             return ExecuteBinaryOperation(
                 MeasurementTypeFromDtos(firstQuantityDto, secondQuantityDto),
                 OperationType.Add,
                 firstQuantityDto,
                 secondQuantityDto,
                 targetUnitText: null,
+                normalizedUserId,
                 (firstQuantityModel, secondQuantityModel, targetUnit) =>
                 {
                     (double resultValue, string resultUnitText) = AddInternal(firstQuantityModel, secondQuantityModel, targetUnitText: firstQuantityModel.UnitText);
@@ -72,14 +81,17 @@ namespace ServiceLayer.Services
                 });
         }
 
-        public QuantityDto Add(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, string targetUnitText)
+        public QuantityDto Add(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, string targetUnitText, Guid? userId = null)
         {
+            Guid? normalizedUserId = NormalizeUserId(userId);
+
             return ExecuteBinaryOperation(
                 MeasurementTypeFromDtos(firstQuantityDto, secondQuantityDto),
                 OperationType.Add,
                 firstQuantityDto,
                 secondQuantityDto,
                 targetUnitText,
+                normalizedUserId,
                 (firstQuantityModel, secondQuantityModel, targetUnit) =>
                 {
                     (double resultValue, string resultUnitText) = AddInternal(firstQuantityModel, secondQuantityModel, targetUnitText: targetUnit);
@@ -87,14 +99,17 @@ namespace ServiceLayer.Services
                 });
         }
 
-        public QuantityDto Subtract(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto)
+        public QuantityDto Subtract(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, Guid? userId = null)
         {
+            Guid? normalizedUserId = NormalizeUserId(userId);
+
             return ExecuteBinaryOperation(
                 MeasurementTypeFromDtos(firstQuantityDto, secondQuantityDto),
                 OperationType.Subtract,
                 firstQuantityDto,
                 secondQuantityDto,
                 targetUnitText: null,
+                normalizedUserId,
                 (firstQuantityModel, secondQuantityModel, targetUnit) =>
                 {
                     (double resultValue, string resultUnitText) = SubtractInternal(firstQuantityModel, secondQuantityModel, targetUnitText: firstQuantityModel.UnitText);
@@ -102,14 +117,17 @@ namespace ServiceLayer.Services
                 });
         }
 
-        public QuantityDto Subtract(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, string targetUnitText)
+        public QuantityDto Subtract(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, string targetUnitText, Guid? userId = null)
         {
+            Guid? normalizedUserId = NormalizeUserId(userId);
+
             return ExecuteBinaryOperation(
                 MeasurementTypeFromDtos(firstQuantityDto, secondQuantityDto),
                 OperationType.Subtract,
                 firstQuantityDto,
                 secondQuantityDto,
                 targetUnitText,
+                normalizedUserId,
                 (firstQuantityModel, secondQuantityModel, targetUnit) =>
                 {
                     (double resultValue, string resultUnitText) = SubtractInternal(firstQuantityModel, secondQuantityModel, targetUnitText: targetUnit);
@@ -117,14 +135,17 @@ namespace ServiceLayer.Services
                 });
         }
 
-        public QuantityDto Divide(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto)
+        public QuantityDto Divide(QuantityDto firstQuantityDto, QuantityDto secondQuantityDto, Guid? userId = null)
         {
+            Guid? normalizedUserId = NormalizeUserId(userId);
+
             return ExecuteBinaryOperation(
                 MeasurementTypeFromDtos(firstQuantityDto, secondQuantityDto),
                 OperationType.Divide,
                 firstQuantityDto,
                 secondQuantityDto,
                 targetUnitText: null,
+                normalizedUserId,
                 (firstQuantityModel, secondQuantityModel, targetUnit) =>
                 {
                     double ratio = DivideInternal(firstQuantityModel, secondQuantityModel);
@@ -138,6 +159,7 @@ namespace ServiceLayer.Services
             QuantityDto quantityDto,
             OperationType operationType,
             string? targetUnitText,
+            Guid? userId,
             Func<ModelLayer.Models.QuantityModel, string?, QuantityDto> operation)
         {
             ModelLayer.Models.QuantityModel? quantityModel = null;
@@ -153,7 +175,7 @@ namespace ServiceLayer.Services
 
                 QuantityDto resultDto = operation(quantityModel, targetUnitText);
 
-                SaveSuccessEntity(operationType, quantityModel, secondQuantityModel: null, targetUnitText, resultDto);
+                SaveSuccessEntity(operationType, quantityModel, secondQuantityModel: null, targetUnitText, resultDto, userId);
 
                 return resultDto;
             }
@@ -165,18 +187,18 @@ namespace ServiceLayer.Services
 
                 QuantityDto errorDto = BuildErrorResult(operationType, measurementType, exception.Message);
 
-                SaveErrorEntity(operationType, quantityDto, secondQuantityDto: null, targetUnitText, errorDto);
+                SaveErrorEntity(operationType, quantityDto, secondQuantityDto: null, targetUnitText, errorDto, userId);
 
                 return errorDto;
             }
         }
-
         private QuantityDto ExecuteBinaryOperation(
             MeasurementType measurementType,
             OperationType operationType,
             QuantityDto firstQuantityDto,
             QuantityDto secondQuantityDto,
             string? targetUnitText,
+            Guid? userId,
             Func<ModelLayer.Models.QuantityModel, ModelLayer.Models.QuantityModel, string?, QuantityDto> operation)
         {
             ModelLayer.Models.QuantityModel? firstQuantityModel = null;
@@ -194,7 +216,7 @@ namespace ServiceLayer.Services
 
                 QuantityDto resultDto = operation(firstQuantityModel, secondQuantityModel, targetUnitText);
 
-                SaveSuccessEntity(operationType, firstQuantityModel, secondQuantityModel, targetUnitText, resultDto);
+                SaveSuccessEntity(operationType, firstQuantityModel, secondQuantityModel, targetUnitText, resultDto, userId);
 
                 return resultDto;
             }
@@ -202,10 +224,20 @@ namespace ServiceLayer.Services
             {
                 QuantityDto errorDto = BuildErrorResult(operationType, measurementType, exception.Message);
 
-                SaveErrorEntity(operationType, firstQuantityDto, secondQuantityDto, targetUnitText, errorDto);
+                SaveErrorEntity(operationType, firstQuantityDto, secondQuantityDto, targetUnitText, errorDto, userId);
 
                 return errorDto;
             }
+        }
+
+        private static Guid? NormalizeUserId(Guid? userId)
+        {
+            if (!userId.HasValue)
+            {
+                return null;
+            }
+
+            return userId.Value == Guid.Empty ? null : userId;
         }
 
         // ---------------- Core business logic (delegates to domain engine in ModelLayer) ----------------
@@ -480,7 +512,8 @@ namespace ServiceLayer.Services
             ModelLayer.Models.QuantityModel firstQuantityModel,
             ModelLayer.Models.QuantityModel? secondQuantityModel,
             string? targetUnitText,
-            QuantityDto resultDto)
+            QuantityDto resultDto,
+            Guid? userId)
         {
             QuantityMeasurementEntity entity = new QuantityMeasurementEntity(
                 resultDto.OperationId,
@@ -497,7 +530,8 @@ namespace ServiceLayer.Services
                 resultDto.ResultValue,
                 resultDto.ResultUnitText,
                 hasError: false,
-                errorMessage: null);
+                errorMessage: null,
+                userId);
 
             quantityMeasurementRepository.Save(entity);
         }
@@ -507,7 +541,8 @@ namespace ServiceLayer.Services
             QuantityDto? firstQuantityDto,
             QuantityDto? secondQuantityDto,
             string? targetUnitText,
-            QuantityDto errorDto)
+            QuantityDto errorDto,
+            Guid? userId)
         {
             MeasurementType measurementType = firstQuantityDto?.MeasurementType
                 ?? secondQuantityDto?.MeasurementType
@@ -534,7 +569,8 @@ namespace ServiceLayer.Services
                 resultValue: null,
                 resultUnitText: null,
                 hasError: true,
-                errorMessage: errorDto.ErrorMessage);
+                errorMessage: errorDto.ErrorMessage,
+                userId);
 
             quantityMeasurementRepository.Save(entity);
         }

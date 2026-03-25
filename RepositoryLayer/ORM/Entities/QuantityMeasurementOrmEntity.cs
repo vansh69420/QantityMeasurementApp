@@ -41,6 +41,8 @@ namespace RepositoryLayer.Orm.Entities
         [MaxLength(32)]
         public string? ResultUnitText { get; set; }
 
+        public Guid? UserId { get; set; }
+
         public bool HasError { get; set; }
 
         public string? ErrorMessage { get; set; }
