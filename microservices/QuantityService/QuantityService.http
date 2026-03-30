@@ -1,0 +1,6 @@
+@QuantityService_HostAddress = http://localhost:5286
+
+GET {{QuantityService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

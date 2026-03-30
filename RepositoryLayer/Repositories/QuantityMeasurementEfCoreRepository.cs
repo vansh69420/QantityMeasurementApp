@@ -12,26 +12,26 @@ namespace RepositoryLayer.Repositories
 {
     public sealed class QuantityMeasurementEfCoreRepository : IQuantityMeasurementRepository
     {
-        private readonly DbContextOptions<QuantityMeasurementOrmDbContext> options;
+        private readonly DbContextOptions<QuantityOperationsOrmDbContext> options;
 
-        public QuantityMeasurementEfCoreRepository(string baseConnectionString, string ormDatabaseName)
+        public QuantityMeasurementEfCoreRepository(string baseConnectionString, string quantityDatabaseName)
         {
             if (string.IsNullOrWhiteSpace(baseConnectionString))
             {
                 throw new ArgumentNullException(nameof(baseConnectionString));
             }
 
-            if (string.IsNullOrWhiteSpace(ormDatabaseName))
+            if (string.IsNullOrWhiteSpace(quantityDatabaseName))
             {
-                throw new ArgumentNullException(nameof(ormDatabaseName));
+                throw new ArgumentNullException(nameof(quantityDatabaseName));
             }
 
-            string ormConnectionString = QuantityMeasurementOrmConnectionString.BuildOrmConnectionString(
+            string quantityConnectionString = QuantityMeasurementOrmConnectionString.BuildOrmConnectionString(
                 baseConnectionString,
-                ormDatabaseName);
+                quantityDatabaseName);
 
-            options = new DbContextOptionsBuilder<QuantityMeasurementOrmDbContext>()
-                .UseSqlServer(ormConnectionString)
+            options = new DbContextOptionsBuilder<QuantityOperationsOrmDbContext>()
+                .UseSqlServer(quantityConnectionString)
                 .Options;
         }
 
@@ -44,7 +44,7 @@ namespace RepositoryLayer.Repositories
 
             try
             {
-                using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
+                using QuantityOperationsOrmDbContext dbContext = new QuantityOperationsOrmDbContext(options);
 
                 QuantityMeasurementOrmEntity? existing = dbContext.QuantityMeasurementOperations
                     .FirstOrDefault(e => e.OperationId == quantityMeasurementEntity.OperationId);
@@ -70,7 +70,7 @@ namespace RepositoryLayer.Repositories
         {
             try
             {
-                using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
+                using QuantityOperationsOrmDbContext dbContext = new QuantityOperationsOrmDbContext(options);
 
                 List<QuantityMeasurementOrmEntity> rows = dbContext.QuantityMeasurementOperations
                     .AsNoTracking()
@@ -94,7 +94,7 @@ namespace RepositoryLayer.Repositories
 
             try
             {
-                using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
+                using QuantityOperationsOrmDbContext dbContext = new QuantityOperationsOrmDbContext(options);
 
                 List<QuantityMeasurementOrmEntity> rows = dbContext.QuantityMeasurementOperations
                     .AsNoTracking()
@@ -114,7 +114,7 @@ namespace RepositoryLayer.Repositories
         {
             try
             {
-                using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
+                using QuantityOperationsOrmDbContext dbContext = new QuantityOperationsOrmDbContext(options);
 
                 List<QuantityMeasurementOrmEntity> rows = dbContext.QuantityMeasurementOperations
                     .AsNoTracking()
@@ -139,7 +139,7 @@ namespace RepositoryLayer.Repositories
 
             try
             {
-                using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
+                using QuantityOperationsOrmDbContext dbContext = new QuantityOperationsOrmDbContext(options);
 
                 List<QuantityMeasurementOrmEntity> rows = dbContext.QuantityMeasurementOperations
                     .AsNoTracking()
@@ -159,7 +159,7 @@ namespace RepositoryLayer.Repositories
         {
             try
             {
-                using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
+                using QuantityOperationsOrmDbContext dbContext = new QuantityOperationsOrmDbContext(options);
 
                 List<QuantityMeasurementOrmEntity> rows = dbContext.QuantityMeasurementOperations
                     .AsNoTracking()
@@ -184,7 +184,7 @@ namespace RepositoryLayer.Repositories
 
             try
             {
-                using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
+                using QuantityOperationsOrmDbContext dbContext = new QuantityOperationsOrmDbContext(options);
 
                 List<QuantityMeasurementOrmEntity> rows = dbContext.QuantityMeasurementOperations
                     .AsNoTracking()
@@ -204,7 +204,7 @@ namespace RepositoryLayer.Repositories
         {
             try
             {
-                using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
+                using QuantityOperationsOrmDbContext dbContext = new QuantityOperationsOrmDbContext(options);
                 return dbContext.QuantityMeasurementOperations.Count();
             }
             catch (Exception exception)
@@ -222,7 +222,7 @@ namespace RepositoryLayer.Repositories
 
             try
             {
-                using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
+                using QuantityOperationsOrmDbContext dbContext = new QuantityOperationsOrmDbContext(options);
                 return dbContext.QuantityMeasurementOperations.Count(e => e.UserId == userId);
             }
             catch (Exception exception)
@@ -233,12 +233,11 @@ namespace RepositoryLayer.Repositories
 
         public void DeleteAll()
         {
-            // Must be DELETE (not TRUNCATE) so trigger writes audit DELETE rows.
             const string sql = "DELETE FROM dbo.QuantityMeasurementOperations;";
 
             try
             {
-                using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
+                using QuantityOperationsOrmDbContext dbContext = new QuantityOperationsOrmDbContext(options);
                 dbContext.Database.ExecuteSqlRaw(sql);
             }
             catch (Exception exception)
@@ -256,7 +255,7 @@ namespace RepositoryLayer.Repositories
 
             try
             {
-                using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
+                using QuantityOperationsOrmDbContext dbContext = new QuantityOperationsOrmDbContext(options);
                 dbContext.Database.ExecuteSqlInterpolated(
                     $"DELETE FROM dbo.QuantityMeasurementOperations WHERE UserId = {userId};");
             }
