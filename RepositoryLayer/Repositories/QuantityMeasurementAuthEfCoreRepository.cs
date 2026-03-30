@@ -10,37 +10,37 @@ namespace RepositoryLayer.Repositories
 {
     public sealed class QuantityMeasurementAuthEfCoreRepository : IAuthRepository
     {
-        private readonly DbContextOptions<QuantityMeasurementOrmDbContext> dbContextOptions;
+        private readonly DbContextOptions<AuthOrmDbContext> dbContextOptions;
 
-        public QuantityMeasurementAuthEfCoreRepository(string baseConnectionString, string ormDatabaseName)
+        public QuantityMeasurementAuthEfCoreRepository(string baseConnectionString, string authDatabaseName)
         {
             if (string.IsNullOrWhiteSpace(baseConnectionString))
             {
                 throw new ArgumentException("Base connection string cannot be null/empty.", nameof(baseConnectionString));
             }
 
-            if (string.IsNullOrWhiteSpace(ormDatabaseName))
+            if (string.IsNullOrWhiteSpace(authDatabaseName))
             {
-                throw new ArgumentException("ORM database name cannot be null/empty.", nameof(ormDatabaseName));
+                throw new ArgumentException("Auth database name cannot be null/empty.", nameof(authDatabaseName));
             }
 
-            string ormConnectionString = QuantityMeasurementOrmConnectionString.BuildOrmConnectionString(baseConnectionString, ormDatabaseName);
+            string authConnectionString = QuantityMeasurementOrmConnectionString.BuildOrmConnectionString(baseConnectionString, authDatabaseName);
 
-            DbContextOptionsBuilder<QuantityMeasurementOrmDbContext> optionsBuilder = new DbContextOptionsBuilder<QuantityMeasurementOrmDbContext>();
-            optionsBuilder.UseSqlServer(ormConnectionString);
+            DbContextOptionsBuilder<AuthOrmDbContext> optionsBuilder = new DbContextOptionsBuilder<AuthOrmDbContext>();
+            optionsBuilder.UseSqlServer(authConnectionString);
 
             dbContextOptions = optionsBuilder.Options;
         }
 
         public async Task<bool> UserExistsByUsernameAsync(string username)
         {
-            await using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(dbContextOptions);
+            await using AuthOrmDbContext dbContext = new AuthOrmDbContext(dbContextOptions);
             return await dbContext.Users.AnyAsync(u => u.Username == username);
         }
 
         public async Task<bool> UserExistsByEmailAsync(string email)
         {
-            await using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(dbContextOptions);
+            await using AuthOrmDbContext dbContext = new AuthOrmDbContext(dbContextOptions);
             return await dbContext.Users.AnyAsync(u => u.Email == email);
         }
 
@@ -48,7 +48,7 @@ namespace RepositoryLayer.Repositories
         {
             user = user ?? throw new ArgumentNullException(nameof(user));
 
-            await using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(dbContextOptions);
+            await using AuthOrmDbContext dbContext = new AuthOrmDbContext(dbContextOptions);
 
             UserOrmEntity orm = MapToOrm(user);
             dbContext.Users.Add(orm);
@@ -63,7 +63,7 @@ namespace RepositoryLayer.Repositories
                 throw new ArgumentException("Login cannot be null/empty.", nameof(login));
             }
 
-            await using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(dbContextOptions);
+            await using AuthOrmDbContext dbContext = new AuthOrmDbContext(dbContextOptions);
 
             UserOrmEntity? orm = await dbContext.Users
                 .AsNoTracking()
@@ -74,7 +74,7 @@ namespace RepositoryLayer.Repositories
 
         public async Task<UserEntity?> GetUserByUserIdAsync(Guid userId)
         {
-            await using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(dbContextOptions);
+            await using AuthOrmDbContext dbContext = new AuthOrmDbContext(dbContextOptions);
 
             UserOrmEntity? orm = await dbContext.Users
                 .AsNoTracking()
@@ -87,7 +87,7 @@ namespace RepositoryLayer.Repositories
         {
             refreshToken = refreshToken ?? throw new ArgumentNullException(nameof(refreshToken));
 
-            await using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(dbContextOptions);
+            await using AuthOrmDbContext dbContext = new AuthOrmDbContext(dbContextOptions);
 
             RefreshTokenOrmEntity orm = MapToOrm(refreshToken);
             dbContext.RefreshTokens.Add(orm);
@@ -99,7 +99,7 @@ namespace RepositoryLayer.Repositories
         {
             tokenHash = tokenHash ?? throw new ArgumentNullException(nameof(tokenHash));
 
-            await using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(dbContextOptions);
+            await using AuthOrmDbContext dbContext = new AuthOrmDbContext(dbContextOptions);
 
             RefreshTokenOrmEntity? orm = await dbContext.RefreshTokens
                 .AsNoTracking()
@@ -110,7 +110,7 @@ namespace RepositoryLayer.Repositories
 
         public async Task RevokeRefreshTokenAsync(Guid refreshTokenId, DateTime revokedUtc, Guid replacedByRefreshTokenId)
         {
-            await using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(dbContextOptions);
+            await using AuthOrmDbContext dbContext = new AuthOrmDbContext(dbContextOptions);
 
             RefreshTokenOrmEntity? existing = await dbContext.RefreshTokens
                 .FirstOrDefaultAsync(t => t.RefreshTokenId == refreshTokenId);
