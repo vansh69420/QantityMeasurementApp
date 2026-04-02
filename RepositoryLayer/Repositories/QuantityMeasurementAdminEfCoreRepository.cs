@@ -14,26 +14,17 @@ namespace RepositoryLayer.Repositories
     {
         private readonly DbContextOptions<QuantityMeasurementOrmDbContext> dbContextOptions;
 
-        public QuantityMeasurementAdminEfCoreRepository(string baseConnectionString, string ormDatabaseName)
+        public QuantityMeasurementAdminEfCoreRepository(string ormConnectionString)
         {
-            if (string.IsNullOrWhiteSpace(baseConnectionString))
+            if (string.IsNullOrWhiteSpace(ormConnectionString))
             {
-                throw new ArgumentException("Base connection string cannot be null/empty.", nameof(baseConnectionString));
+                throw new ArgumentException("ORM connection string cannot be null/empty.", nameof(ormConnectionString));
             }
-
-            if (string.IsNullOrWhiteSpace(ormDatabaseName))
-            {
-                throw new ArgumentException("ORM database name cannot be null/empty.", nameof(ormDatabaseName));
-            }
-
-            string ormConnectionString = QuantityMeasurementOrmConnectionString.BuildOrmConnectionString(
-                baseConnectionString,
-                ormDatabaseName);
 
             DbContextOptionsBuilder<QuantityMeasurementOrmDbContext> optionsBuilder =
                 new DbContextOptionsBuilder<QuantityMeasurementOrmDbContext>();
 
-            optionsBuilder.UseSqlServer(ormConnectionString);
+            optionsBuilder.UseNpgsql(ormConnectionString);
 
             dbContextOptions = optionsBuilder.Options;
         }

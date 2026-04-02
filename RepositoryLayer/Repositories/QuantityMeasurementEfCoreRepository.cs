@@ -14,24 +14,15 @@ namespace RepositoryLayer.Repositories
     {
         private readonly DbContextOptions<QuantityMeasurementOrmDbContext> options;
 
-        public QuantityMeasurementEfCoreRepository(string baseConnectionString, string ormDatabaseName)
+        public QuantityMeasurementEfCoreRepository(string ormConnectionString)
         {
-            if (string.IsNullOrWhiteSpace(baseConnectionString))
+            if (string.IsNullOrWhiteSpace(ormConnectionString))
             {
-                throw new ArgumentNullException(nameof(baseConnectionString));
+                throw new ArgumentNullException(nameof(ormConnectionString));
             }
-
-            if (string.IsNullOrWhiteSpace(ormDatabaseName))
-            {
-                throw new ArgumentNullException(nameof(ormDatabaseName));
-            }
-
-            string ormConnectionString = QuantityMeasurementOrmConnectionString.BuildOrmConnectionString(
-                baseConnectionString,
-                ormDatabaseName);
 
             options = new DbContextOptionsBuilder<QuantityMeasurementOrmDbContext>()
-                .UseSqlServer(ormConnectionString)
+                .UseNpgsql(ormConnectionString)
                 .Options;
         }
 
@@ -233,13 +224,18 @@ namespace RepositoryLayer.Repositories
 
         public void DeleteAll()
         {
-            // Must be DELETE (not TRUNCATE) so trigger writes audit DELETE rows.
-            const string sql = "DELETE FROM dbo.QuantityMeasurementOperations;";
-
             try
             {
                 using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
-                dbContext.Database.ExecuteSqlRaw(sql);
+
+                List<QuantityMeasurementOrmEntity> rows = dbContext.QuantityMeasurementOperations.ToList();
+                if (rows.Count == 0)
+                {
+                    return;
+                }
+
+                dbContext.QuantityMeasurementOperations.RemoveRange(rows);
+                dbContext.SaveChanges();
             }
             catch (Exception exception)
             {
@@ -257,8 +253,18 @@ namespace RepositoryLayer.Repositories
             try
             {
                 using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
-                dbContext.Database.ExecuteSqlInterpolated(
-                    $"DELETE FROM dbo.QuantityMeasurementOperations WHERE UserId = {userId};");
+
+                List<QuantityMeasurementOrmEntity> rows = dbContext.QuantityMeasurementOperations
+                    .Where(e => e.UserId == userId)
+                    .ToList();
+
+                if (rows.Count == 0)
+                {
+                    return;
+                }
+
+                dbContext.QuantityMeasurementOperations.RemoveRange(rows);
+                dbContext.SaveChanges();
             }
             catch (Exception exception)
             {

@@ -1,7 +1,9 @@
 using System;
 using ControllerLayer.Contracts;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using QuantityMeasurementApp.Dtos;
 using ServiceLayer.Interfaces;
 
@@ -14,10 +16,12 @@ namespace ControllerLayer.ApiControllers
         private const string RefreshCookieName = "qm_refresh_token";
 
         private readonly IAuthService authService;
+        private readonly AuthCookieOptions authCookieOptions;
 
-        public AuthApiController(IAuthService authService)
+        public AuthApiController(IAuthService authService, IOptions<AuthCookieOptions> authCookieOptions)
         {
             this.authService = authService ?? throw new ArgumentNullException(nameof(authService));
+            this.authCookieOptions = authCookieOptions?.Value ?? throw new ArgumentNullException(nameof(authCookieOptions));
         }
 
         [AllowAnonymous]
@@ -31,7 +35,6 @@ namespace ControllerLayer.ApiControllers
                 return StatusCode(result.StatusCode, result.ErrorMessage);
             }
 
-            // 201 + plain body "User Created"
             return Created(string.Empty, result.Message);
         }
 
@@ -82,18 +85,64 @@ namespace ControllerLayer.ApiControllers
             return Ok(MapToResponse(result));
         }
 
+        [AllowAnonymous]
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            Request.Cookies.TryGetValue(RefreshCookieName, out string? refreshToken);
+
+            await authService.LogoutAsync(refreshToken);
+
+            DeleteRefreshCookie();
+
+            return NoContent();
+        }
+
         private void AppendRefreshCookie(string refreshTokenPlainText)
         {
+            SameSiteMode sameSiteMode = ParseSameSite(authCookieOptions.SameSite);
+
             CookieOptions options = new CookieOptions
             {
                 HttpOnly = true,
-                Secure = Request.IsHttps,
-                SameSite = SameSiteMode.Lax,
-                Expires = DateTimeOffset.UtcNow.AddDays(7),
+                Secure = authCookieOptions.Secure,
+                SameSite = sameSiteMode,
+                Expires = DateTimeOffset.UtcNow.AddDays(authCookieOptions.ExpirationDays),
                 Path = "/"
             };
 
             Response.Cookies.Append(RefreshCookieName, refreshTokenPlainText, options);
+        }
+
+        private void DeleteRefreshCookie()
+        {
+            SameSiteMode sameSiteMode = ParseSameSite(authCookieOptions.SameSite);
+
+            CookieOptions options = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = authCookieOptions.Secure,
+                SameSite = sameSiteMode,
+                Expires = DateTimeOffset.UtcNow.AddDays(-1),
+                Path = "/"
+            };
+
+            Response.Cookies.Delete(RefreshCookieName, options);
+        }
+
+        private static SameSiteMode ParseSameSite(string? sameSiteText)
+        {
+            if (string.IsNullOrWhiteSpace(sameSiteText))
+            {
+                return SameSiteMode.Lax;
+            }
+
+            return sameSiteText.Trim().ToLowerInvariant() switch
+            {
+                "none" => SameSiteMode.None,
+                "strict" => SameSiteMode.Strict,
+                _ => SameSiteMode.Lax
+            };
         }
 
         private static AuthSessionResponse MapToResponse(AuthSessionResultDto dto)

@@ -1,4 +1,5 @@
 using System.Text;
+using ControllerLayer;
 using ControllerLayer.Controllers;
 using ControllerLayer.Factories;
 using ControllerLayer.Middleware;
@@ -13,30 +14,29 @@ using ServiceLayer.Services;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-// UC18 fail-fast: OrmSql only
 string? repositoryType = builder.Configuration["QuantityMeasurement:RepositoryType"];
 if (!string.Equals(repositoryType, "OrmSql", StringComparison.OrdinalIgnoreCase))
 {
     throw new InvalidOperationException("UC18 Authentication requires RepositoryType=OrmSql.");
 }
 
-string baseConnectionString =
+string ormConnectionString =
     builder.Configuration.GetConnectionString("QuantityMeasurementDb")
     ?? throw new InvalidOperationException("Missing ConnectionStrings:QuantityMeasurementDb.");
 
-string ormDatabaseName =
-    builder.Configuration["QuantityMeasurement:OrmDatabaseName"]
-    ?? "QuantityMeasurementOrmDb";
+QuantityMeasurementOrmDatabaseInitializer.EnsureMigrated(ormConnectionString);
 
-// Ensure ORM DB exists + apply ALL EF migrations at startup
-QuantityMeasurementOrmDatabaseInitializer.EnsureMigrated(baseConnectionString, ormDatabaseName);
-
-// UC18 fail-fast: JWT signing key must exist
 string? signingKey = builder.Configuration["Jwt:SigningKey"];
 if (string.IsNullOrWhiteSpace(signingKey))
 {
     throw new InvalidOperationException("Missing Jwt__SigningKey environment variable (config path: Jwt:SigningKey).");
 }
+
+string[] allowedOrigins =
+    builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? throw new InvalidOperationException("Missing Cors:AllowedOrigins configuration.");
+
+builder.Services.Configure<AuthCookieOptions>(builder.Configuration.GetSection("AuthCookie"));
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -69,7 +69,18 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddHealthChecks();
 
-// JWT auth
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FrontendCorsPolicy", policyBuilder =>
+    {
+        policyBuilder
+            .WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+
 string issuer = builder.Configuration["Jwt:Issuer"] ?? "QuantityMeasurementApp";
 string audience = builder.Configuration["Jwt:Audience"] ?? "QuantityMeasurementApp.Client";
 
@@ -94,45 +105,34 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// Repository: Singleton, created by factory based on config
 builder.Services.AddSingleton<IQuantityMeasurementRepository>(serviceProvider =>
 {
     IConfiguration configuration = serviceProvider.GetRequiredService<IConfiguration>();
     return QuantityMeasurementRepositoryFactory.Create(configuration);
 });
 
-// Auth repository (OrmSql only)
 builder.Services.AddSingleton<IAuthRepository>(serviceProvider =>
 {
     IConfiguration configuration = serviceProvider.GetRequiredService<IConfiguration>();
 
-    string configuredBaseConnectionString =
+    string configuredOrmConnectionString =
         configuration.GetConnectionString("QuantityMeasurementDb")
         ?? throw new InvalidOperationException("Missing ConnectionStrings:QuantityMeasurementDb.");
 
-    string configuredOrmDatabaseName =
-        configuration["QuantityMeasurement:OrmDatabaseName"]
-        ?? "QuantityMeasurementOrmDb";
-
-    return new QuantityMeasurementAuthEfCoreRepository(configuredBaseConnectionString, configuredOrmDatabaseName);
+    return new QuantityMeasurementAuthEfCoreRepository(configuredOrmConnectionString);
 });
 
 builder.Services.AddSingleton<IAdminRepository>(serviceProvider =>
 {
     IConfiguration configuration = serviceProvider.GetRequiredService<IConfiguration>();
 
-    string configuredBaseConnectionString =
+    string configuredOrmConnectionString =
         configuration.GetConnectionString("QuantityMeasurementDb")
         ?? throw new InvalidOperationException("Missing ConnectionStrings:QuantityMeasurementDb.");
 
-    string configuredOrmDatabaseName =
-        configuration["QuantityMeasurement:OrmDatabaseName"]
-        ?? "QuantityMeasurementOrmDb";
-
-    return new QuantityMeasurementAdminEfCoreRepository(configuredBaseConnectionString, configuredOrmDatabaseName);
+    return new QuantityMeasurementAdminEfCoreRepository(configuredOrmConnectionString);
 });
 
-// JWT options (15 min)
 builder.Services.AddSingleton(serviceProvider =>
 {
     IConfiguration configuration = serviceProvider.GetRequiredService<IConfiguration>();
@@ -144,7 +144,6 @@ builder.Services.AddSingleton(serviceProvider =>
     return new JwtTokenOptions(optIssuer, optAudience, optKey, TimeSpan.FromMinutes(15));
 });
 
-// Service + Business Controller: Scoped (per HTTP request)
 builder.Services.AddScoped<IQuantityMeasurementService, QuantityMeasurementServiceImpl>();
 builder.Services.AddScoped<QuantityMeasurementController>();
 builder.Services.AddScoped<IAuthService, AuthServiceImpl>();
@@ -155,6 +154,8 @@ app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseSwagger();
 app.UseSwaggerUI();
+
+app.UseCors("FrontendCorsPolicy");
 
 app.UseAuthentication();
 app.UseAuthorization();

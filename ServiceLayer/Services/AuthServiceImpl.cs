@@ -184,7 +184,6 @@ namespace ServiceLayer.Services
                     return BuildSessionError(401, "Invalid refresh token.");
                 }
 
-                // Rotate refresh token
                 string newRefreshTokenPlainText = CreateRefreshTokenPlainText();
                 byte[] newTokenHash = ComputeSha256(newRefreshTokenPlainText);
 
@@ -211,6 +210,17 @@ namespace ServiceLayer.Services
             {
                 return BuildSessionError(500, ex.Message);
             }
+        }
+
+        public async Task LogoutAsync(string? refreshTokenPlainText)
+        {
+            if (string.IsNullOrWhiteSpace(refreshTokenPlainText))
+            {
+                return;
+            }
+
+            byte[] tokenHash = ComputeSha256(refreshTokenPlainText);
+            await authRepository.RevokeRefreshTokenByHashAsync(tokenHash, DateTime.UtcNow);
         }
 
         private static AuthRegisterResultDto BuildRegisterError(int statusCode, string message)

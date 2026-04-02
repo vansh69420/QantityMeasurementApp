@@ -10,5 +10,7 @@ namespace ServiceLayer.Interfaces
         Task<AuthSessionResultDto> LoginAsync(string login, string password);
 
         Task<AuthSessionResultDto> RefreshAsync(string refreshTokenPlainText);
+
+        Task LogoutAsync(string? refreshTokenPlainText);
     }
 }

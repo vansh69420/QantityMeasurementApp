@@ -17,10 +17,8 @@ namespace RepositoryLayer.Orm.Entities
         [MaxLength(256)]
         public string Email { get; set; } = string.Empty;
 
-        [Column(TypeName = "varbinary(32)")]
         public byte[] PasswordHash { get; set; } = Array.Empty<byte>();
 
-        [Column(TypeName = "varbinary(16)")]
         public byte[] PasswordSalt { get; set; } = Array.Empty<byte>();
 
         [MaxLength(32)]

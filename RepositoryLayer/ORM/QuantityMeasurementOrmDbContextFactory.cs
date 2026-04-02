@@ -8,25 +8,12 @@ namespace RepositoryLayer.Orm
     {
         public QuantityMeasurementOrmDbContext CreateDbContext(string[] args)
         {
-            string? baseConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__QuantityMeasurementDb");
-            if (string.IsNullOrWhiteSpace(baseConnectionString))
-            {
-                throw new InvalidOperationException("Missing env var ConnectionStrings__QuantityMeasurementDb for EF migrations.");
-            }
-
-            string ormDatabaseName =
-                Environment.GetEnvironmentVariable("QuantityMeasurement__OrmDatabaseName")
-                ?? "QuantityMeasurementOrmDb";
-
-            // Ensure DB exists for migrations target
-            SqlServerDatabaseCreator.EnsureDatabaseExists(baseConnectionString, ormDatabaseName);
-
-            string ormConnectionString = QuantityMeasurementOrmConnectionString.BuildOrmConnectionString(
-                baseConnectionString,
-                ormDatabaseName);
+            string ormConnectionString =
+                Environment.GetEnvironmentVariable("ConnectionStrings__QuantityMeasurementDb")
+                ?? throw new InvalidOperationException("Missing env var ConnectionStrings__QuantityMeasurementDb for EF migrations.");
 
             DbContextOptions<QuantityMeasurementOrmDbContext> options = new DbContextOptionsBuilder<QuantityMeasurementOrmDbContext>()
-                .UseSqlServer(ormConnectionString)
+                .UseNpgsql(ormConnectionString)
                 .Options;
 
             return new QuantityMeasurementOrmDbContext(options);

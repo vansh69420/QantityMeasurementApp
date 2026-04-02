@@ -18,5 +18,6 @@ namespace RepositoryLayer.Repositories
         Task<RefreshTokenEntity?> GetRefreshTokenByHashAsync(byte[] tokenHash);
 
         Task RevokeRefreshTokenAsync(Guid refreshTokenId, DateTime revokedUtc, Guid replacedByRefreshTokenId);
+        Task RevokeRefreshTokenByHashAsync(byte[] tokenHash, DateTime revokedUtc);
     }
 }

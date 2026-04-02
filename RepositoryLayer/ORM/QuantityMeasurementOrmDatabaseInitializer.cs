@@ -5,6 +5,21 @@ namespace RepositoryLayer.Orm
 {
     public static class QuantityMeasurementOrmDatabaseInitializer
     {
+        public static void EnsureMigrated(string ormConnectionString)
+        {
+            if (string.IsNullOrWhiteSpace(ormConnectionString))
+            {
+                throw new ArgumentNullException(nameof(ormConnectionString));
+            }
+
+            DbContextOptions<QuantityMeasurementOrmDbContext> options = new DbContextOptionsBuilder<QuantityMeasurementOrmDbContext>()
+                .UseNpgsql(ormConnectionString)
+                .Options;
+
+            using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
+            dbContext.Database.Migrate();
+        }
+
         public static void EnsureMigrated(string baseConnectionString, string ormDatabaseName)
         {
             if (string.IsNullOrWhiteSpace(baseConnectionString))
@@ -17,19 +32,11 @@ namespace RepositoryLayer.Orm
                 throw new ArgumentNullException(nameof(ormDatabaseName));
             }
 
-            // Create DB first (SQL Server requires DB to exist before connecting/migrating).
-            SqlServerDatabaseCreator.EnsureDatabaseExists(baseConnectionString, ormDatabaseName);
-
             string ormConnectionString = QuantityMeasurementOrmConnectionString.BuildOrmConnectionString(
                 baseConnectionString,
                 ormDatabaseName);
 
-            DbContextOptions<QuantityMeasurementOrmDbContext> options = new DbContextOptionsBuilder<QuantityMeasurementOrmDbContext>()
-                .UseSqlServer(ormConnectionString)
-                .Options;
-
-            using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(options);
-            dbContext.Database.Migrate();
+            EnsureMigrated(ormConnectionString);
         }
     }
 }

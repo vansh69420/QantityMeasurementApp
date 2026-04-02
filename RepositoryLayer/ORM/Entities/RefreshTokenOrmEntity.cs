@@ -13,7 +13,6 @@ namespace RepositoryLayer.Orm.Entities
 
         public Guid UserId { get; set; }
 
-        [Column(TypeName = "varbinary(32)")]
         public byte[] TokenHash { get; set; } = Array.Empty<byte>();
 
         public DateTime CreatedUtc { get; set; }

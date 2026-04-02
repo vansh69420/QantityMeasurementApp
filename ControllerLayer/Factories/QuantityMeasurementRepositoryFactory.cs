@@ -1,4 +1,3 @@
-// File: ControllerLayer/Factories/QuantityMeasurementRepositoryFactory.cs
 using System;
 using Microsoft.Extensions.Configuration;
 using RepositoryLayer.Repositories;
@@ -38,11 +37,8 @@ namespace ControllerLayer.Factories
 
             if (string.Equals(repositoryType, "OrmSql", StringComparison.OrdinalIgnoreCase))
             {
-                string? baseConnectionString = configuration.GetConnectionString("QuantityMeasurementDb");
-                string ormDatabaseName =
-                    configuration["QuantityMeasurement:OrmDatabaseName"]
-                    ?? "QuantityMeasurementOrmDb";
-                if (string.IsNullOrWhiteSpace(baseConnectionString))
+                string? ormConnectionString = configuration.GetConnectionString("QuantityMeasurementDb");
+                if (string.IsNullOrWhiteSpace(ormConnectionString))
                 {
                     throw new InvalidOperationException(
                         "RepositoryType is 'OrmSql' but ConnectionStrings:QuantityMeasurementDb is missing.");
@@ -55,14 +51,11 @@ namespace ControllerLayer.Factories
                         "RepositoryType is 'OrmSql' but Redis:ConnectionString is missing.");
                 }
 
-                // Ensure ORM DB is migrated (your UC17 choice)
-                RepositoryLayer.Orm.QuantityMeasurementOrmDatabaseInitializer.EnsureMigrated(baseConnectionString, ormDatabaseName);
-                // Fail fast (S1): connect+ping Redis during startup
+                RepositoryLayer.Orm.QuantityMeasurementOrmDatabaseInitializer.EnsureMigrated(ormConnectionString);
+
                 var multiplexer = RepositoryLayer.Redis.RedisConnectionProvider.ConnectAndPing(redisConnectionString);
-
                 var outboxStore = new RepositoryLayer.Redis.RedisOutboxStore(multiplexer);
-
-                var innerOrmRepo = new QuantityMeasurementEfCoreRepository(baseConnectionString, ormDatabaseName);
+                var innerOrmRepo = new QuantityMeasurementEfCoreRepository(ormConnectionString);
 
                 return new DisconnectedQuantityMeasurementRepository(innerOrmRepo, outboxStore);
             }

@@ -12,22 +12,15 @@ namespace RepositoryLayer.Repositories
     {
         private readonly DbContextOptions<QuantityMeasurementOrmDbContext> dbContextOptions;
 
-        public QuantityMeasurementAuthEfCoreRepository(string baseConnectionString, string ormDatabaseName)
+        public QuantityMeasurementAuthEfCoreRepository(string ormConnectionString)
         {
-            if (string.IsNullOrWhiteSpace(baseConnectionString))
+            if (string.IsNullOrWhiteSpace(ormConnectionString))
             {
-                throw new ArgumentException("Base connection string cannot be null/empty.", nameof(baseConnectionString));
+                throw new ArgumentException("ORM connection string cannot be null/empty.", nameof(ormConnectionString));
             }
-
-            if (string.IsNullOrWhiteSpace(ormDatabaseName))
-            {
-                throw new ArgumentException("ORM database name cannot be null/empty.", nameof(ormDatabaseName));
-            }
-
-            string ormConnectionString = QuantityMeasurementOrmConnectionString.BuildOrmConnectionString(baseConnectionString, ormDatabaseName);
 
             DbContextOptionsBuilder<QuantityMeasurementOrmDbContext> optionsBuilder = new DbContextOptionsBuilder<QuantityMeasurementOrmDbContext>();
-            optionsBuilder.UseSqlServer(ormConnectionString);
+            optionsBuilder.UseNpgsql(ormConnectionString);
 
             dbContextOptions = optionsBuilder.Options;
         }
@@ -122,6 +115,30 @@ namespace RepositoryLayer.Repositories
 
             existing.RevokedUtc = revokedUtc;
             existing.ReplacedByRefreshTokenId = replacedByRefreshTokenId;
+
+            await dbContext.SaveChangesAsync();
+        }
+
+        public async Task RevokeRefreshTokenByHashAsync(byte[] tokenHash, DateTime revokedUtc)
+        {
+            tokenHash = tokenHash ?? throw new ArgumentNullException(nameof(tokenHash));
+
+            await using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(dbContextOptions);
+
+            RefreshTokenOrmEntity? existing = await dbContext.RefreshTokens
+                .FirstOrDefaultAsync(t => t.TokenHash.SequenceEqual(tokenHash));
+
+            if (existing is null)
+            {
+                return;
+            }
+
+            if (existing.RevokedUtc.HasValue)
+            {
+                return;
+            }
+
+            existing.RevokedUtc = revokedUtc;
 
             await dbContext.SaveChangesAsync();
         }
