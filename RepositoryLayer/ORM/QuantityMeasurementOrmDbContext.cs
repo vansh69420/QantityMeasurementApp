@@ -44,6 +44,10 @@ namespace RepositoryLayer.Orm
                 .HasIndex(e => e.Email)
                 .IsUnique();
 
+            modelBuilder.Entity<UserOrmEntity>()
+                .HasIndex(e => new { e.AuthProvider, e.GoogleSubject })
+                .IsUnique();
+
             modelBuilder.Entity<RefreshTokenOrmEntity>()
                 .HasIndex(e => e.RefreshTokenId)
                 .IsUnique();

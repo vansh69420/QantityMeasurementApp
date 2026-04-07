@@ -10,6 +10,8 @@ namespace RepositoryLayer.Repositories
 {
     public sealed class QuantityMeasurementAuthEfCoreRepository : IAuthRepository
     {
+        private const string GoogleProvider = "Google";
+
         private readonly DbContextOptions<QuantityMeasurementOrmDbContext> dbContextOptions;
 
         public QuantityMeasurementAuthEfCoreRepository(string ormConnectionString)
@@ -72,6 +74,38 @@ namespace RepositoryLayer.Repositories
             UserOrmEntity? orm = await dbContext.Users
                 .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.UserId == userId);
+
+            return orm is null ? null : MapToDomain(orm);
+        }
+
+        public async Task<UserEntity?> GetUserByEmailAsync(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                throw new ArgumentException("Email cannot be null/empty.", nameof(email));
+            }
+
+            await using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(dbContextOptions);
+
+            UserOrmEntity? orm = await dbContext.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Email == email);
+
+            return orm is null ? null : MapToDomain(orm);
+        }
+
+        public async Task<UserEntity?> GetGoogleUserBySubjectAsync(string googleSubject)
+        {
+            if (string.IsNullOrWhiteSpace(googleSubject))
+            {
+                throw new ArgumentException("Google subject cannot be null/empty.", nameof(googleSubject));
+            }
+
+            await using QuantityMeasurementOrmDbContext dbContext = new QuantityMeasurementOrmDbContext(dbContextOptions);
+
+            UserOrmEntity? orm = await dbContext.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.AuthProvider == GoogleProvider && u.GoogleSubject == googleSubject);
 
             return orm is null ? null : MapToDomain(orm);
         }
@@ -153,6 +187,8 @@ namespace RepositoryLayer.Repositories
                 PasswordHash = entity.PasswordHash,
                 PasswordSalt = entity.PasswordSalt,
                 Role = entity.Role,
+                AuthProvider = entity.AuthProvider,
+                GoogleSubject = entity.GoogleSubject,
                 CreatedUtc = entity.CreatedUtc,
                 UpdatedUtc = entity.UpdatedUtc
             };
@@ -167,6 +203,8 @@ namespace RepositoryLayer.Repositories
                 orm.PasswordHash,
                 orm.PasswordSalt,
                 orm.Role,
+                orm.AuthProvider,
+                orm.GoogleSubject,
                 orm.CreatedUtc,
                 orm.UpdatedUtc);
         }

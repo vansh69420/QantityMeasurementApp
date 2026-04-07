@@ -23,6 +23,21 @@ namespace ControllerLayer.Contracts
         public string Password { get; set; } = string.Empty;
     }
 
+    public sealed class GoogleLoginRequest
+    {
+        [Required]
+        public string IdToken { get; set; } = string.Empty;
+    }
+
+    public sealed class GoogleRegisterRequest
+    {
+        [Required]
+        public string Username { get; set; } = string.Empty;
+
+        [Required]
+        public string IdToken { get; set; } = string.Empty;
+    }
+
     public sealed class AuthSessionResponse
     {
         public string AccessToken { get; set; } = string.Empty;

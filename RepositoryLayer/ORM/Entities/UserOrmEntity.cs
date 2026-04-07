@@ -24,6 +24,12 @@ namespace RepositoryLayer.Orm.Entities
         [MaxLength(32)]
         public string Role { get; set; } = string.Empty;
 
+        [MaxLength(32)]
+        public string AuthProvider { get; set; } = "Local";
+
+        [MaxLength(256)]
+        public string? GoogleSubject { get; set; }
+
         public DateTime CreatedUtc { get; set; }
 
         public DateTime? UpdatedUtc { get; set; }

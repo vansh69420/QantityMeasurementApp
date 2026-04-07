@@ -98,6 +98,8 @@ namespace RepositoryLayer.Repositories
                 orm.PasswordHash,
                 orm.PasswordSalt,
                 orm.Role,
+                orm.AuthProvider,
+                orm.GoogleSubject,
                 orm.CreatedUtc,
                 orm.UpdatedUtc);
         }

@@ -60,6 +60,48 @@ namespace ControllerLayer.ApiControllers
         }
 
         [AllowAnonymous]
+        [HttpPost("google/login")]
+        public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
+        {
+            AuthSessionResultDto result = await authService.GoogleLoginAsync(request.IdToken);
+
+            if (result.HasError)
+            {
+                return StatusCode(result.StatusCode, result.ErrorMessage);
+            }
+
+            if (string.IsNullOrWhiteSpace(result.RefreshTokenPlainText))
+            {
+                return StatusCode(500, "Refresh token generation failed.");
+            }
+
+            AppendRefreshCookie(result.RefreshTokenPlainText);
+
+            return Ok(MapToResponse(result));
+        }
+
+        [AllowAnonymous]
+        [HttpPost("google/register")]
+        public async Task<IActionResult> GoogleRegister([FromBody] GoogleRegisterRequest request)
+        {
+            AuthSessionResultDto result = await authService.GoogleRegisterAsync(request.Username, request.IdToken);
+
+            if (result.HasError)
+            {
+                return StatusCode(result.StatusCode, result.ErrorMessage);
+            }
+
+            if (string.IsNullOrWhiteSpace(result.RefreshTokenPlainText))
+            {
+                return StatusCode(500, "Refresh token generation failed.");
+            }
+
+            AppendRefreshCookie(result.RefreshTokenPlainText);
+
+            return Ok(MapToResponse(result));
+        }
+
+        [AllowAnonymous]
         [HttpPost("refresh")]
         public async Task<IActionResult> Refresh()
         {

@@ -9,6 +9,10 @@ namespace ServiceLayer.Interfaces
 
         Task<AuthSessionResultDto> LoginAsync(string login, string password);
 
+        Task<AuthSessionResultDto> GoogleLoginAsync(string idToken);
+
+        Task<AuthSessionResultDto> GoogleRegisterAsync(string username, string idToken);
+
         Task<AuthSessionResultDto> RefreshAsync(string refreshTokenPlainText);
 
         Task LogoutAsync(string? refreshTokenPlainText);

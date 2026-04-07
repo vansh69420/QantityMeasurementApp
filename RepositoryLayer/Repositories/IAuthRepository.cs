@@ -13,6 +13,8 @@ namespace RepositoryLayer.Repositories
 
         Task<UserEntity?> GetUserByLoginAsync(string login);
         Task<UserEntity?> GetUserByUserIdAsync(Guid userId);
+        Task<UserEntity?> GetUserByEmailAsync(string email);
+        Task<UserEntity?> GetGoogleUserBySubjectAsync(string googleSubject);
 
         Task SaveRefreshTokenAsync(RefreshTokenEntity refreshToken);
         Task<RefreshTokenEntity?> GetRefreshTokenByHashAsync(byte[] tokenHash);

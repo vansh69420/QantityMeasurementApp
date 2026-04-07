@@ -11,6 +11,8 @@ namespace QuantityMeasurementApp.Entities
             byte[] passwordHash,
             byte[] passwordSalt,
             string role,
+            string authProvider,
+            string? googleSubject,
             DateTime createdUtc,
             DateTime? updatedUtc)
         {
@@ -20,6 +22,8 @@ namespace QuantityMeasurementApp.Entities
             PasswordHash = passwordHash ?? throw new ArgumentNullException(nameof(passwordHash));
             PasswordSalt = passwordSalt ?? throw new ArgumentNullException(nameof(passwordSalt));
             Role = role ?? throw new ArgumentNullException(nameof(role));
+            AuthProvider = authProvider ?? throw new ArgumentNullException(nameof(authProvider));
+            GoogleSubject = googleSubject;
             CreatedUtc = createdUtc;
             UpdatedUtc = updatedUtc;
         }
@@ -30,6 +34,8 @@ namespace QuantityMeasurementApp.Entities
         public byte[] PasswordHash { get; }
         public byte[] PasswordSalt { get; }
         public string Role { get; }
+        public string AuthProvider { get; }
+        public string? GoogleSubject { get; }
         public DateTime CreatedUtc { get; }
         public DateTime? UpdatedUtc { get; }
     }

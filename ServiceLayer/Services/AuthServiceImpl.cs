@@ -3,7 +3,9 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Google.Apis.Auth;
 using Konscious.Security.Cryptography;
 using Microsoft.IdentityModel.Tokens;
 using QuantityMeasurementApp.Dtos;
@@ -24,15 +26,34 @@ namespace ServiceLayer.Services
         private const int Argon2Iterations = 4;
         private const int Argon2Parallelism = 2;
 
+        private const string LocalAuthProvider = "Local";
+        private const string GoogleAuthProvider = "Google";
+
         private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(7);
+
+        private static readonly Regex UsernameRegex = new Regex(
+            "^[A-Za-z][A-Za-z0-9_]{2,19}$",
+            RegexOptions.Compiled);
+
+        private static readonly Regex EmailRegex = new Regex(
+            "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        private static readonly Regex PasswordRegex = new Regex(
+            "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z\\d]).{8,64}$",
+            RegexOptions.Compiled);
 
         private readonly IAuthRepository authRepository;
         private readonly JwtTokenOptions jwtOptions;
+        private readonly string googleClientId;
 
-        public AuthServiceImpl(IAuthRepository authRepository, JwtTokenOptions jwtOptions)
+        public AuthServiceImpl(IAuthRepository authRepository, JwtTokenOptions jwtOptions, string googleClientId)
         {
             this.authRepository = authRepository ?? throw new ArgumentNullException(nameof(authRepository));
             this.jwtOptions = jwtOptions ?? throw new ArgumentNullException(nameof(jwtOptions));
+            this.googleClientId = string.IsNullOrWhiteSpace(googleClientId)
+                ? throw new ArgumentNullException(nameof(googleClientId))
+                : googleClientId;
         }
 
         public async Task<AuthRegisterResultDto> RegisterAsync(string username, string email, string password)
@@ -54,6 +75,21 @@ namespace ServiceLayer.Services
                 if (string.IsNullOrWhiteSpace(password))
                 {
                     return BuildRegisterError(400, "Password is required.");
+                }
+
+                if (!UsernameRegex.IsMatch(username))
+                {
+                    return BuildRegisterError(400, "Username must be 3-20 characters, start with a letter, and contain only letters, digits, or underscore.");
+                }
+
+                if (!EmailRegex.IsMatch(email))
+                {
+                    return BuildRegisterError(400, "Email format is invalid.");
+                }
+
+                if (!PasswordRegex.IsMatch(password))
+                {
+                    return BuildRegisterError(400, "Password must be 8-64 characters and include uppercase, lowercase, number, and special character.");
                 }
 
                 bool usernameExists = await authRepository.UserExistsByUsernameAsync(username);
@@ -81,6 +117,8 @@ namespace ServiceLayer.Services
                     hash,
                     salt,
                     UserRole.User.ToString(),
+                    LocalAuthProvider,
+                    null,
                     nowUtc,
                     updatedUtc: null);
 
@@ -119,31 +157,133 @@ namespace ServiceLayer.Services
                     return BuildSessionError(401, "Invalid credentials.");
                 }
 
+                if (string.Equals(user.AuthProvider, GoogleAuthProvider, StringComparison.OrdinalIgnoreCase))
+                {
+                    return BuildSessionError(401, "This account uses Google sign-in. Please continue with Google.");
+                }
+
                 bool passwordValid = VerifyPassword(password, user.PasswordSalt, user.PasswordHash);
                 if (!passwordValid)
                 {
                     return BuildSessionError(401, "Invalid credentials.");
                 }
 
-                (string accessToken, DateTime expiresUtc) = CreateAccessToken(user);
+                return await CreateSessionForUserAsync(user);
+            }
+            catch (Exception ex)
+            {
+                return BuildSessionError(500, ex.Message);
+            }
+        }
 
-                string refreshTokenPlainText = CreateRefreshTokenPlainText();
-                byte[] refreshTokenHash = ComputeSha256(refreshTokenPlainText);
+        public async Task<AuthSessionResultDto> GoogleLoginAsync(string idToken)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(idToken))
+                {
+                    return BuildSessionError(400, "Google ID token is required.");
+                }
 
+                GoogleJsonWebSignature.Payload payload = await ValidateGoogleTokenAsync(idToken);
+
+                if (string.IsNullOrWhiteSpace(payload.Subject))
+                {
+                    return BuildSessionError(401, "Google account subject is missing.");
+                }
+
+                UserEntity? googleUser = await authRepository.GetGoogleUserBySubjectAsync(payload.Subject);
+                if (googleUser is null)
+                {
+                    return BuildSessionError(404, "Google account is not registered. Please sign up first.");
+                }
+
+                return await CreateSessionForUserAsync(googleUser);
+            }
+            catch (InvalidJwtException)
+            {
+                return BuildSessionError(401, "Invalid Google token.");
+            }
+            catch (Exception ex)
+            {
+                return BuildSessionError(500, ex.Message);
+            }
+        }
+
+        public async Task<AuthSessionResultDto> GoogleRegisterAsync(string username, string idToken)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(username))
+                {
+                    return BuildSessionError(400, "Username is required.");
+                }
+
+                if (string.IsNullOrWhiteSpace(idToken))
+                {
+                    return BuildSessionError(400, "Google ID token is required.");
+                }
+
+                if (!UsernameRegex.IsMatch(username))
+                {
+                    return BuildSessionError(400, "Username must be 3-20 characters, start with a letter, and contain only letters, digits, or underscore.");
+                }
+
+                bool usernameExists = await authRepository.UserExistsByUsernameAsync(username);
+                if (usernameExists)
+                {
+                    return BuildSessionError(409, "Username already exists.");
+                }
+
+                GoogleJsonWebSignature.Payload payload = await ValidateGoogleTokenAsync(idToken);
+
+                if (string.IsNullOrWhiteSpace(payload.Subject))
+                {
+                    return BuildSessionError(401, "Google account subject is missing.");
+                }
+
+                if (string.IsNullOrWhiteSpace(payload.Email))
+                {
+                    return BuildSessionError(401, "Google account email is missing.");
+                }
+
+                UserEntity? existingGoogleUser = await authRepository.GetGoogleUserBySubjectAsync(payload.Subject);
+                if (existingGoogleUser is not null)
+                {
+                    return BuildSessionError(409, "This Google account is already registered. Please sign in.");
+                }
+
+                UserEntity? existingEmailUser = await authRepository.GetUserByEmailAsync(payload.Email);
+                if (existingEmailUser is not null)
+                {
+                    return BuildSessionError(409, "An account with this email already exists. Account linking is required and is not available yet.");
+                }
+
+                byte[] generatedSalt = RandomNumberGenerator.GetBytes(SaltLengthBytes);
+                byte[] generatedHash = ComputeArgon2idHash(Guid.NewGuid().ToString("N"), generatedSalt);
+
+                Guid userId = Guid.NewGuid();
                 DateTime nowUtc = DateTime.UtcNow;
 
-                RefreshTokenEntity refreshToken = new RefreshTokenEntity(
-                    refreshTokenId: Guid.NewGuid(),
-                    userId: user.UserId,
-                    tokenHash: refreshTokenHash,
-                    createdUtc: nowUtc,
-                    expiresUtc: nowUtc.Add(RefreshTokenLifetime),
-                    revokedUtc: null,
-                    replacedByRefreshTokenId: null);
+                UserEntity user = new UserEntity(
+                    userId,
+                    username,
+                    payload.Email,
+                    generatedHash,
+                    generatedSalt,
+                    UserRole.User.ToString(),
+                    GoogleAuthProvider,
+                    payload.Subject,
+                    nowUtc,
+                    updatedUtc: null);
 
-                await authRepository.SaveRefreshTokenAsync(refreshToken);
+                await authRepository.CreateUserAsync(user);
 
-                return BuildSessionSuccess(user, accessToken, expiresUtc, refreshTokenPlainText);
+                return await CreateSessionForUserAsync(user);
+            }
+            catch (InvalidJwtException)
+            {
+                return BuildSessionError(401, "Invalid Google token.");
             }
             catch (Exception ex)
             {
@@ -221,6 +361,39 @@ namespace ServiceLayer.Services
 
             byte[] tokenHash = ComputeSha256(refreshTokenPlainText);
             await authRepository.RevokeRefreshTokenByHashAsync(tokenHash, DateTime.UtcNow);
+        }
+
+        private async Task<AuthSessionResultDto> CreateSessionForUserAsync(UserEntity user)
+        {
+            (string accessToken, DateTime expiresUtc) = CreateAccessToken(user);
+
+            string refreshTokenPlainText = CreateRefreshTokenPlainText();
+            byte[] refreshTokenHash = ComputeSha256(refreshTokenPlainText);
+
+            DateTime nowUtc = DateTime.UtcNow;
+
+            RefreshTokenEntity refreshToken = new RefreshTokenEntity(
+                refreshTokenId: Guid.NewGuid(),
+                userId: user.UserId,
+                tokenHash: refreshTokenHash,
+                createdUtc: nowUtc,
+                expiresUtc: nowUtc.Add(RefreshTokenLifetime),
+                revokedUtc: null,
+                replacedByRefreshTokenId: null);
+
+            await authRepository.SaveRefreshTokenAsync(refreshToken);
+
+            return BuildSessionSuccess(user, accessToken, expiresUtc, refreshTokenPlainText);
+        }
+
+        private async Task<GoogleJsonWebSignature.Payload> ValidateGoogleTokenAsync(string idToken)
+        {
+            GoogleJsonWebSignature.ValidationSettings validationSettings = new GoogleJsonWebSignature.ValidationSettings
+            {
+                Audience = new[] { googleClientId }
+            };
+
+            return await GoogleJsonWebSignature.ValidateAsync(idToken, validationSettings);
         }
 
         private static AuthRegisterResultDto BuildRegisterError(int statusCode, string message)

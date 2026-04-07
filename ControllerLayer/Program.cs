@@ -32,6 +32,10 @@ if (string.IsNullOrWhiteSpace(signingKey))
     throw new InvalidOperationException("Missing Jwt__SigningKey environment variable (config path: Jwt:SigningKey).");
 }
 
+string googleClientId =
+    builder.Configuration["GoogleAuth:ClientId"]
+    ?? throw new InvalidOperationException("Missing GoogleAuth:ClientId configuration.");
+
 string[] allowedOrigins =
     builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
     ?? throw new InvalidOperationException("Missing Cors:AllowedOrigins configuration.");
@@ -143,6 +147,8 @@ builder.Services.AddSingleton(serviceProvider =>
 
     return new JwtTokenOptions(optIssuer, optAudience, optKey, TimeSpan.FromMinutes(15));
 });
+
+builder.Services.AddSingleton(googleClientId);
 
 builder.Services.AddScoped<IQuantityMeasurementService, QuantityMeasurementServiceImpl>();
 builder.Services.AddScoped<QuantityMeasurementController>();
