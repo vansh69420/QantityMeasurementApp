@@ -43,7 +43,11 @@ string[] allowedOrigins =
 builder.Services.Configure<AuthCookieOptions>(builder.Configuration.GetSection("AuthCookie"));
 
 builder.Services.AddControllers();
+builder.Services.AddCors();
+
 builder.Services.AddEndpointsApiExplorer();
+WebApplication app = builder.Build();
+
 
 builder.Services.AddSwaggerGen(options =>
 {
@@ -72,17 +76,28 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 builder.Services.AddHealthChecks();
+builder.Services.AddAuthorization();
+app.UseSwagger();
+app.UseSwaggerUI();
 
-builder.Services.AddCors(options =>
+
+// builder.Services.AddCors(options =>
+// {
+//     options.AddPolicy("FrontendCorsPolicy", policyBuilder =>
+//     {
+//         policyBuilder
+//             .WithOrigins(allowedOrigins)
+//             .AllowAnyHeader()
+//             .AllowAnyMethod()
+//             .AllowCredentials();
+//     });
+// });
+app.UseCors(policy =>
 {
-    options.AddPolicy("FrontendCorsPolicy", policyBuilder =>
-    {
-        policyBuilder
-            .WithOrigins(allowedOrigins)
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
-    });
+    policy
+        .AllowAnyOrigin()
+        .AllowAnyHeader()
+        .AllowAnyMethod();
 });
 
 string issuer = builder.Configuration["Jwt:Issuer"] ?? "QuantityMeasurementApp";
@@ -107,7 +122,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+// builder.Services.AddAuthorization();
 
 builder.Services.AddSingleton<IQuantityMeasurementRepository>(serviceProvider =>
 {
@@ -154,18 +169,18 @@ builder.Services.AddScoped<IQuantityMeasurementService, QuantityMeasurementServi
 builder.Services.AddScoped<QuantityMeasurementController>();
 builder.Services.AddScoped<IAuthService, AuthServiceImpl>();
 
-WebApplication app = builder.Build();
+// WebApplication app = builder.Build();
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
-app.UseSwagger();
-app.UseSwaggerUI();
+// app.UseSwagger();
+// app.UseSwaggerUI();
 
 app.UseCors("FrontendCorsPolicy");
 
 app.UseAuthentication();
 app.UseAuthorization();
-
+app.MapGet("/",()=> "Quantity Measurement app is running...");
 app.MapControllers();
 app.MapHealthChecks("/health");
 
